@@ -306,7 +306,8 @@ const camadaCorredor = {
 function iniciarGeral() {
   const { Wb, Hb, bloco: B } = M, n = Wb * Hb, pos = new Float32Array(n * 3);
   for (let i = 0; i < Hb; i++) for (let j = 0; j < Wb; j++) {
-    const k = i * Wb + j, [x, y] = xy((j + 0.5) * B, (i + 0.5) * B); pos[3 * k] = x; pos[3 * k + 1] = y;
+    const k = i * Wb + j, m = maplibregl.MercatorCoordinate.fromLngLat(lonlat((j + 0.5) * B, (i + 0.5) * B), 0);   // Mercator exato
+    pos[3 * k] = (m.x - origem.x) / sM; pos[3 * k + 1] = (origem.y - m.y) / sM;
   }
   geoG = new THREE.BufferGeometry();
   geoG.setAttribute('position', new THREE.BufferAttribute(pos, 3));
