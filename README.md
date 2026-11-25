@@ -2,7 +2,7 @@
 
 Visualização 3D interativa (Three.js) do **Índice de Cobertura pela Estrutura Arbórea (ICEA)** no Corredor Ecológico da Bacia do Rio São Lourenço (BHSL), Mato Grosso, Brasil. A página compara três mapas globais de altura do dossel (**LANG**, **GEDI/Potapov** e **META**) e mostra as pegadas do lidar espacial **GEDI** como referência.
 
-**Página:** `https://<usuario>.github.io/icea-canopy-3d-bhsl/` (depois de ativar o GitHub Pages, ver abaixo)
+**Página:** https://bonnexd01.github.io/icea-canopy-3d-bhsl/
 
 ![Visão do corredor: relevo do dossel colorido pelo ICEA do LANG](docs/preview_corredor.png)
 
