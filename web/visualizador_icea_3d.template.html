@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3L6 20h7v9h6v-9h7z' fill='%232f9a6a'/%3E%3Ccircle cx='16' cy='12' r='3' fill='%23f39a3b'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#08110f; --bg2:#122420; --panel:rgba(12,22,20,.74); --line:rgba(244,220,156,.16);
@@ -95,6 +96,13 @@ th.atual,td.atual{color:var(--acc);font-weight:800}
 #carregando{position:fixed;inset:0;display:grid;place-items:center;z-index:20;background:var(--bg);color:var(--tx2);font-weight:600;transition:opacity .4s}
 #carregando.fim{opacity:0;pointer-events:none}
 #bt-painel{display:none}
+@media (max-width:1100px) and (min-width:761px){
+  #pnl-dir{display:none;top:auto;bottom:16px;max-height:calc(100vh - 140px)}
+  #pnl-dir.aberto{display:block}
+  #bt-painel{display:block}
+  #legenda{left:350px;right:16px;transform:none;min-width:0}
+  body.dir-aberto #legenda{display:none}
+}
 @media (max-width:760px){
   #pnl-esq{top:auto;bottom:8px;left:8px;right:8px;width:auto;max-height:46vh;padding:14px}
   #pnl-dir{top:8px;left:8px;right:8px;width:auto;max-height:34vh;display:none}
