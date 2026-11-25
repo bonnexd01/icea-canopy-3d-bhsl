@@ -125,6 +125,9 @@ body.tour #pnl-esq,body.tour #pnl-dir,body.tour #legenda{display:none}
   #inset{width:min(460px,calc(100vw - 366px))}
 }
 @media (max-width:760px){
+  #ins-tit small{display:none}
+  .ins-bt{padding:3px 7px;font-size:11px}
+  #ins-cab{gap:5px;flex-wrap:wrap}
   #pnl-esq{top:auto;bottom:8px;left:8px;right:8px;width:auto;max-height:40vh;padding:14px}
   #pnl-dir{top:8px;left:8px;right:8px;width:auto;max-height:40vh;display:none}
   #pnl-dir.aberto{display:block}
@@ -316,7 +319,18 @@ const map = new maplibregl.Map({
       { id: 'relevo', type: 'hillshade', source: 'demhs', paint: { 'hillshade-exaggeration': 0.35, 'hillshade-shadow-color': '#0a1410', 'hillshade-highlight-color': '#fff6de', 'hillshade-accent-color': '#2a2a1a' } }] },
 });
 
-window.__mapa = map;   // depuração no console
+window.__mapa = map;
+// margens do enquadramento proporcionais à tela: margens fixas de desktop (360 + 340 px) tornam o enquadramento impossível no celular
+function folga(p) {
+  const W = map.getCanvas().clientWidth || innerWidth, H = map.getCanvas().clientHeight || innerHeight, cel = innerWidth <= 760;
+  if (cel) {   // celular: painel de controles embaixo; janela 3D (e, no uso da terra, a linha do tempo) em cima
+    const tl = !!document.getElementById('tl'), janela = document.body.classList.contains('inset-aberto'), tour = document.body.classList.contains('tour');
+    p = { left: 16, right: 16, top: tl ? 190 : (janela ? H * 0.47 : (tour ? 170 : 20)), bottom: tour ? 20 : (tl && janela ? H * 0.72 : H * 0.42) };
+  }
+  else if (innerWidth <= 1100) p = { ...p, right: Math.min(p.right, 40) };
+  const sx = Math.min(1, 0.75 * W / (p.left + p.right)), sy = Math.min(1, 0.8 * H / (p.top + p.bottom));
+  return { top: p.top * sy, bottom: p.bottom * sy, left: p.left * sx, right: p.right * sx };
+}   // depuração no console
 const estiloPronto = new Promise(r => {   // estilo pronto, sem esperar as imagens de satélite
   const iv = setInterval(() => { if (map.style && map.style._loaded) { clearInterval(iv); r(); } }, 100);
   map.once('load', () => { clearInterval(iv); r(); });
@@ -437,7 +451,7 @@ function camadasMapa() {
 }
 function irCorredor(dur = 4200) {
   const b = [[M.left, M.top - M.H * M.px], [M.left + M.W * M.px, M.top]];
-  const cam = map.cameraForBounds(b, { padding: { top: 40, bottom: 120, left: 360, right: 340 } });
+  const cam = map.cameraForBounds(b, { padding: folga({ top: 40, bottom: 120, left: 360, right: 340 }) });
   map.flyTo({ ...cam, zoom: cam.zoom + 0.15, pitch: 55, bearing: -12, duration: dur, essential: true });
 }
 
@@ -599,7 +613,7 @@ async function abrirJanela(w) {
   document.querySelectorAll('.janela').forEach((b, i) => b.classList.toggle('on', i === w));
   await construirJanela(); enquadrarJanela();
   const jd = D.janelas[w];
-  map.fitBounds([lonlat(jd.c0, jd.r0 + jd.n), lonlat(jd.c0 + jd.n, jd.r0)], { padding: { top: 60, bottom: 60, left: 380, right: S.grande ? 60 : 520 }, pitch: 50, bearing: map.getBearing(), duration: 2200, maxZoom: 13 });
+  map.fitBounds([lonlat(jd.c0, jd.r0 + jd.n), lonlat(jd.c0 + jd.n, jd.r0)], { padding: folga({ top: 60, bottom: 60, left: 380, right: S.grande ? 60 : 520 }), pitch: 50, bearing: map.getBearing(), duration: 2200, maxZoom: 13 });
 }
 function fecharJanela() { S.janela = -1; infoJanela = null; document.body.classList.remove('inset-aberto'); document.querySelectorAll('.janela').forEach(b => b.classList.remove('on')); statsJanela(); }
 $('ins-fechar').addEventListener('click', fecharJanela);
@@ -704,7 +718,7 @@ try { const t = localStorage.getItem('icea3d-tema'); if (t) document.documentEle
 const voar = o => new Promise(r => { map.stop(); map.once('moveend', r); map.flyTo({ ...o, essential: true }); });
 const girar = (graus, ms) => new Promise(r => { map.stop(); map.once('moveend', r); map.easeTo({ bearing: map.getBearing() + graus, duration: ms, easing: t => t }); });
 function setProd(p) { S.prod = p; $('prod').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); tabelaCorredor(); atualizarGeral(); legenda(); }
-function camCorredor() { const b = [[M.left, M.top - M.H * M.px], [M.left + M.W * M.px, M.top]]; return map.cameraForBounds(b, { padding: { top: 170, bottom: 60, left: 60, right: 60 } }); }
+function camCorredor() { const b = [[M.left, M.top - M.H * M.px], [M.left + M.W * M.px, M.top]]; return map.cameraForBounds(b, { padding: folga({ top: 170, bottom: 60, left: 60, right: 60 }) }); }
 const N3 = v => fmt(v, 3), NUM = D.numeros || {};
 function setOpacidade(v) { S.op = v; $('op').value = v; $('op-v').textContent = Math.round(v * 100) + '%'; matG.opacity = v; escGeral.visible = v > 0; map.triggerRepaint(); }
 function setGrande(v) { S.grande = v; $('inset').classList.toggle('grande', v); $('ins-grande').classList.toggle('on', v); setTimeout(tamanhoInset, 0); }
