@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ICEA 3D · BHSL</title>
+<meta name="description" content="Índice de Cobertura pela Estrutura Arbórea (ICEA) do Corredor Ecológico da Bacia do Rio São Lourenço em 3D, a partir dos mapas de altura LANG, GEDI e META e das pegadas lidar GEDI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08110f; --bg2:#122420; --panel:rgba(12,22,20,.74); --line:rgba(244,220,156,.16);
+  --tx:#e8efe9; --tx2:#9fb3aa; --acc:#f4dc9c; --acc2:#c99440; --chip:rgba(255,255,255,.05);
+  --chip-on:rgba(244,220,156,.16); --gap:#27322e; --solo:#b98b4e; --sombra:0 18px 50px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#d5eadd; --bg2:#f1f6ef; --panel:rgba(250,252,247,.82); --line:rgba(20,60,50,.16);
+    --tx:#12201b; --tx2:#4d625a; --acc:#8a5a14; --acc2:#b07a28; --chip:rgba(10,40,30,.05);
+    --chip-on:rgba(176,122,40,.16); --gap:#b9c4bd; --sombra:0 18px 50px rgba(20,50,40,.18);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#d5eadd; --bg2:#f1f6ef; --panel:rgba(250,252,247,.82); --line:rgba(20,60,50,.16);
+  --tx:#12201b; --tx2:#4d625a; --acc:#8a5a14; --acc2:#b07a28; --chip:rgba(10,40,30,.05);
+  --chip-on:rgba(176,122,40,.16); --gap:#b9c4bd; --sombra:0 18px 50px rgba(20,50,40,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(120% 90% at 55% 35%,var(--bg2) 0%,var(--bg) 70%);color:var(--tx);
+  font:14px/1.45 Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#cena{position:fixed;inset:0}
+#cena canvas{display:block;outline:none}
+.painel{position:fixed;background:var(--panel);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);
+  border:1px solid var(--line);border-radius:18px;box-shadow:var(--sombra);z-index:5}
+#pnl-esq{top:16px;left:16px;width:318px;max-height:calc(100vh - 32px);overflow:auto;padding:18px 18px 14px}
+#pnl-dir{top:16px;right:16px;width:300px;max-height:calc(100vh - 140px);overflow:auto;padding:16px 16px 12px}
+.kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:700}
+h1{font:800 25px/1.08 "Bricolage Grotesque",sans-serif;margin:6px 0 4px;letter-spacing:-.01em}
+h2{font:700 13px/1.2 "Bricolage Grotesque",sans-serif;margin:0 0 8px;letter-spacing:.02em;color:var(--acc)}
+.sub{margin:0 0 14px;color:var(--tx2);font-size:12.5px}
+.rot{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--tx2);font-weight:700;margin:14px 0 6px}
+.rot output{font:800 13px "Bricolage Grotesque";color:var(--tx);letter-spacing:0;text-transform:none}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button,.chips button,.acoes button{font:inherit;color:var(--tx);background:transparent;border:0;cursor:pointer}
+.seg button{padding:8px 6px;border-radius:9px;font-weight:700}
+.seg button.on{background:var(--chip-on);color:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--chip);font-weight:600;font-size:13px;line-height:1.15;text-align:left}
+.chips button small{display:block;font-size:10.5px;color:var(--tx2);font-weight:500}
+.chips button.on{background:var(--chip-on);border-color:var(--acc2);color:var(--acc)}
+.chips.prod button{flex:1 1 0}
+input[type=range]{width:100%;accent-color:var(--acc2)}
+.tg{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0;cursor:pointer}
+.tg input{accent-color:var(--acc2)}
+.janelas{display:flex;flex-direction:column;gap:6px}
+.janela{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:12px;
+  border:1px solid var(--line);background:var(--chip);color:var(--tx);font:inherit;cursor:pointer}
+.janela b{font:800 15px "Bricolage Grotesque";color:var(--acc);text-align:center}
+.janela span{font-size:12.5px;font-weight:600;line-height:1.25}
+.janela small{display:block;color:var(--tx2);font-weight:500;font-size:11px}
+.janela.on{border-color:var(--acc2);background:var(--chip-on)}
+.acoes{display:flex;gap:6px;margin-top:14px}
+.acoes button{flex:1;padding:7px 6px;border-radius:10px;border:1px solid var(--line);background:var(--chip);font-weight:600;font-size:12.5px}
+.acoes button:hover,.chips button:hover,.janela:hover{border-color:var(--acc2)}
+details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px;font-size:12.5px;color:var(--tx2)}
+summary{cursor:pointer;color:var(--tx);font-weight:700}
+details p{margin:8px 0}
+code{font-size:12px;color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:5px 4px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left;color:var(--tx2);font-weight:500}
+thead th{font-size:11px;letter-spacing:.06em;color:var(--tx2);font-weight:700}
+th.atual,td.atual{color:var(--acc);font-weight:800}
+.fonte{font-size:10.5px;color:var(--tx2);margin:6px 0 14px}
+.grande{font:800 30px/1 "Bricolage Grotesque";color:var(--acc)}
+#legenda{left:50%;bottom:16px;transform:translateX(-50%);padding:10px 16px 8px;min-width:300px;display:flex;flex-direction:column;gap:4px}
+#leg-tit{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx2);font-weight:700;display:flex;justify-content:space-between;gap:16px}
+#leg-barra{height:10px;border-radius:6px}
+#leg-ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2)}
+#leg-extra{display:flex;gap:14px;font-size:11px;color:var(--tx2);flex-wrap:wrap}
+#leg-extra i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#dica{position:fixed;z-index:8;pointer-events:none;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);
+  border-radius:12px;padding:9px 11px;font-size:12px;min-width:190px;display:none;box-shadow:var(--sombra)}
+#dica h3{margin:0 0 4px;font:800 12.5px "Bricolage Grotesque";color:var(--acc)}
+#dica table{font-size:11.5px}
+#dica td,#dica th{padding:2px 3px}
+#rotulos{position:fixed;inset:0;pointer-events:none;z-index:4}
+.rotulo{position:absolute;left:0;top:0;white-space:nowrap;font:800 12px "Bricolage Grotesque";color:var(--bg);background:var(--acc);
+  padding:3px 8px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.rotulo.prod{font-size:14px;padding:4px 12px}
+.rotulo.clic{pointer-events:auto;cursor:pointer}
+#carregando{position:fixed;inset:0;display:grid;place-items:center;z-index:20;background:var(--bg);color:var(--tx2);font-weight:600;transition:opacity .4s}
+#carregando.fim{opacity:0;pointer-events:none}
+#bt-painel{display:none}
+@media (max-width:760px){
+  #pnl-esq{top:auto;bottom:8px;left:8px;right:8px;width:auto;max-height:46vh;padding:14px}
+  #pnl-dir{top:8px;left:8px;right:8px;width:auto;max-height:34vh;display:none}
+  #pnl-dir.aberto{display:block}
+  #legenda{bottom:auto;top:8px;min-width:0;width:calc(100% - 16px)}
+  body.dir-aberto #legenda{display:none}
+  #bt-painel{display:block}
+  h1{font-size:21px}
+}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div id="cena"></div>
+<div id="rotulos"></div>
+
+<section class="painel" id="pnl-esq">
+  <div class="kicker">ICEA · BHSL · Mato Grosso</div>
+  <h1>Estrutura do dossel em 3D</h1>
+  <p class="sub">Corredor Ecológico da Bacia do Rio São Lourenço (MT) · grade comum de 30 m · H<sub>REF</sub> = <span id="href"></span> m</p>
+
+  <div class="seg" id="modo">
+    <button data-modo="geral" class="on">Corredor</button>
+    <button data-modo="janela">Janela 3D</button>
+  </div>
+
+  <div class="rot">Produto</div>
+  <div class="chips prod" id="prod">
+    <button data-p="lang" class="on">LANG<small>ETH 2020 · 10 m</small></button>
+    <button data-p="gedi">GEDI<small>Potapov 2019 · 30 m</small></button>
+    <button data-p="meta">META<small>Meta/WRI · 1 m</small></button>
+  </div>
+
+  <div class="rot">Cor</div>
+  <div class="chips" id="cor">
+    <button data-c="icea" class="on">ICEA</button>
+    <button data-c="fc">Cobertura fc</button>
+    <button data-c="altura">Altura</button>
+  </div>
+
+  <div id="bloco-alt">
+    <div class="rot">Relevo do dossel</div>
+    <div class="chips" id="alt">
+      <button data-a="ht" class="on">Topo (máx.)</button>
+      <button data-a="hd">hd (média ≥ 5 m)</button>
+    </div>
+  </div>
+
+  <div class="rot">Exagero vertical <output id="ex-v"></output></div>
+  <input type="range" id="ex" min="1" max="200" step="1">
+
+  <div class="rot">Janelas de detalhe · 30 m</div>
+  <div class="janelas" id="lista-janelas"></div>
+
+  <div id="bloco-janela">
+    <label class="tg"><input type="checkbox" id="comparar"> Comparar LANG · GEDI · META lado a lado</label>
+    <div class="rot">Densidade de pontos <output id="dens-v"></output></div>
+    <input type="range" id="dens" min="0.25" max="2" step="0.25" value="1">
+  </div>
+
+  <div style="margin-top:12px">
+    <label class="tg"><input type="checkbox" id="tg-peg" checked> Pegadas GEDI (lidar, RH98)</label>
+    <label class="tg"><input type="checkbox" id="tg-lim" checked> Limite do corredor</label>
+    <label class="tg"><input type="checkbox" id="tg-giro"> Girar a cena</label>
+  </div>
+
+  <div class="acoes">
+    <button id="bt-reset">Recentrar</button>
+    <button id="bt-png">Salvar PNG</button>
+    <button id="bt-tema">Tema</button>
+    <button id="bt-painel">Números</button>
+  </div>
+
+  <details>
+    <summary>Como ler</summary>
+    <p><code>ICEA = fc × min(hd / H<sub>REF</sub>, 1)</code>, de 0 (sem dossel arbóreo) a 1 (dossel fechado e alto). fc é a fração da célula de 30 m com dossel ≥ 5 m; hd é a altura média desses pixels; topo é a altura máxima.</p>
+    <p><b>Corredor:</b> médias em blocos de <span id="bloco-m"></span> (10 × 10 células). A superfície sobe com a altura do dossel e a cor mostra a variável escolhida. Cinza = sem dado (falhas do LANG).</p>
+    <p><b>Janela 3D:</b> nuvem de pontos <b>sintética</b>. Cada célula de 30 m recebe copas em número proporcional a fc, com altura entre hd e o topo; as posições são sorteadas com semente fixa. Não é lidar: mostra a estrutura que cada produto atribui ao dossel.</p>
+    <p><b>Colunas:</b> pegadas GEDI L2A/L2B (lidar real, raio 12,5 m), altura RH98 e cor pelo ICEA de referência <code>cover_z1 × min(RH98 / H<sub>REF</sub>, 1)</code>.</p>
+    <p>Arraste para girar, role para aproximar, botão direito para deslocar. Passe o cursor sobre a cena para ler os valores.</p>
+    <p>Visual inspirado em <i>lidar-mangrove-canopy</i> (linaq11).</p>
+  </details>
+</section>
+
+<aside class="painel" id="pnl-dir">
+  <h2>Corredor inteiro</h2>
+  <table id="tb-corredor"></table>
+  <p class="fonte">Fonte: data/resumo_numeros.md (I01 recortado + V01; T03; T05). CCC de Lin. RMSE da altura do META pelo máximo no círculo da pegada.</p>
+  <div id="st-janela"></div>
+</aside>
+
+<div class="painel" id="legenda">
+  <div id="leg-tit"><span id="leg-nome"></span><span id="leg-prod"></span></div>
+  <div id="leg-barra"></div>
+  <div id="leg-ticks"></div>
+  <div id="leg-extra"></div>
+</div>
+
+<div id="dica"></div>
+<div id="carregando">Descompactando os dados do ICEA…</div>
+
+<script>window.DADOS = /*__DADOS__*/null;</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const D = window.DADOS, M = D.meta;
+const PROD = ['lang', 'gedi', 'meta'];
+const NOME = { lang: 'LANG', gedi: 'GEDI', meta: 'META' };
+const IDX_ICEA = { lang: 5, gedi: 6, meta: 7 };      // posição do ICEA do produto na pegada
+const IDX_H = { lang: 8, gedi: 9, meta: 10 };
+const RAMPA_HEX = ['#123a3f', '#1f6b5c', '#2f9a6a', '#8cc35a', '#e2c84f', '#f39a3b'];
+const RAMPA = RAMPA_HEX.map(h => new THREE.Color(h));
+const SOLO = new THREE.Color('#b98b4e');
+const ND = 255;
+const H_MAX = { geral: 25, janela: 30 };
+
+const S = { modo: 'geral', prod: 'lang', cor: 'icea', alt: 'ht', ex: { geral: 60, janela: 3 },
+            janela: 0, comparar: false, peg: true, lim: true, giro: false, dens: 1 };
+
+// ---------- utilidades ----------
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = (v, d = 2) => (v == null || !isFinite(v)) ? '–' : v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+function rampa(t, c) {
+  t = clamp(t, 0, 1); const s = t * (RAMPA.length - 1);
+  const i = Math.min(RAMPA.length - 2, Math.floor(s)), f = s - i, a = RAMPA[i], b = RAMPA[i + 1];
+  c.r = a.r + (b.r - a.r) * f; c.g = a.g + (b.g - a.g) * f; c.b = a.b + (b.b - a.b) * f; return c;
+}
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+async function dz(b64) {
+  const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const s = new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+const frac = v => v / 250, metros = v => v * 0.25;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const descarta = g => g.traverse(o => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach(m => m.dispose()); });
+
+// ---------- cena ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+$('cena').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 10, 2e6);
+camera.up.set(0, 0, 1);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.zoomToCursor = true;
+controls.maxPolarAngle = Math.PI * 0.49; controls.autoRotateSpeed = 0.6;
+const hemi = new THREE.HemisphereLight(0xeef6ee, 0x2a2418, 1.25); hemi.position.set(0, 0, 1); scene.add(hemi);
+const sol = new THREE.DirectionalLight(0xfff0d8, 1.9); sol.position.set(-1, 1, 1); scene.add(sol);   // de NO, ~35°
+
+const gGeral = new THREE.Group(), escGeral = new THREE.Group(), gJanela = new THREE.Group();
+gGeral.add(escGeral); scene.add(gGeral, gJanela);
+
+// ---------- dados ----------
+const G = {}; let dentroB;
+const cacheJ = {};
+async function dadosJanela(w) {
+  if (cacheJ[w]) return cacheJ[w];
+  const o = {};
+  for (const p of PROD) { o[p] = {}; for (const k of ['icea', 'fc', 'hd', 'ht']) o[p][k] = await dz(D.janelas[w].dados[p][k]); }
+  return (cacheJ[w] = o);
+}
+const xy = (col, lin) => [(col - M.W / 2) * M.mx, (M.H / 2 - lin) * M.my];   // célula -> metros (visão geral)
+
+// ---------- visão geral ----------
+let geoG, meshG, baseG, pegG, limG = [], retG = [];
+function iniciarGeral() {
+  const { Wb, Hb, bloco: B } = M, n = Wb * Hb;
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < Hb; i++) for (let j = 0; j < Wb; j++) {
+    const k = i * Wb + j, [x, y] = xy((j + 0.5) * B, (i + 0.5) * B);
+    pos[3 * k] = x; pos[3 * k + 1] = y;
+  }
+  geoG = new THREE.BufferGeometry();
+  geoG.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geoG.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  meshG = new THREE.Mesh(geoG, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  escGeral.add(meshG);
+
+  // base do corredor (mostra as falhas de dado)
+  const posB = pos.slice(); for (let k = 0; k < n; k++) posB[3 * k + 2] = -3;
+  const ib = [];
+  for (let i = 0; i < Hb - 1; i++) for (let j = 0; j < Wb - 1; j++) {
+    const a = i * Wb + j, b = a + 1, c = a + Wb, d = c + 1;
+    if (dentroB[a] && dentroB[b] && dentroB[c] && dentroB[d]) ib.push(a, c, b, b, c, d);
+  }
+  const geoB = new THREE.BufferGeometry();
+  geoB.setAttribute('position', new THREE.BufferAttribute(posB, 3));
+  geoB.setIndex(new THREE.BufferAttribute(new Uint32Array(ib), 1));
+  baseG = new THREE.Mesh(geoB, new THREE.MeshBasicMaterial({ color: css('--gap') }));
+  gGeral.add(baseG);
+
+  // limite
+  for (const anel of D.limite) {
+    const pts = anel.map(([c, l]) => new THREE.Vector3(...xy(c, l), 0));
+    const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0xf4dc9c, transparent: true, opacity: 0.85, depthTest: false }));
+    ln.renderOrder = 10; limG.push(ln); gGeral.add(ln);
+  }
+
+  // pegadas GEDI
+  const P = D.pegadas, pp = new Float32Array(P.length * 3), pc = new Float32Array(P.length * 3), c = new THREE.Color();
+  P.forEach((f, k) => { const [x, y] = xy(f[0], f[1]); pp.set([x, y, f[2]], 3 * k); rampa(f[3], c); pc.set([c.r, c.g, c.b], 3 * k); });
+  const gp = new THREE.BufferGeometry();
+  gp.setAttribute('position', new THREE.BufferAttribute(pp, 3)); gp.setAttribute('color', new THREE.BufferAttribute(pc, 3));
+  pegG = new THREE.Points(gp, new THREE.PointsMaterial({ size: 4, sizeAttenuation: false, vertexColors: true }));
+  escGeral.add(pegG);
+
+  // retângulos das janelas
+  D.janelas.forEach((jd, w) => {
+    const c0 = jd.c0, r0 = jd.r0, n = jd.n;
+    const cantos = [[c0, r0], [c0 + n, r0], [c0 + n, r0 + n], [c0, r0 + n]].map(([cc, ll]) => new THREE.Vector3(...xy(cc, ll), 0));
+    const lp = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(cantos),
+      new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false }));
+    lp.renderOrder = 11; retG.push(lp); gGeral.add(lp);
+  });
+}
+function atualizarGeral() {
+  const { Wb, Hb } = M, n = Wb * Hb, A = G[S.prod];
+  const Hh = A[S.alt], C = S.cor === 'altura' ? A[S.alt] : A[S.cor];
+  const pos = geoG.attributes.position.array, col = geoG.attributes.color.array, c = new THREE.Color();
+  for (let k = 0; k < n; k++) {
+    const h = Hh[k] === ND ? 0 : metros(Hh[k]);
+    pos[3 * k + 2] = h;
+    const v = C[k];
+    if (v === ND) { c.setRGB(0.3, 0.3, 0.3); }
+    else rampa(S.cor === 'altura' ? metros(v) / H_MAX.geral : frac(v), c);
+    col[3 * k] = c.r; col[3 * k + 1] = c.g; col[3 * k + 2] = c.b;
+  }
+  const idx = [];
+  for (let i = 0; i < Hb - 1; i++) for (let j = 0; j < Wb - 1; j++) {
+    const a = i * Wb + j, b = a + 1, cc = a + Wb, d = cc + 1;
+    if (Hh[a] !== ND && Hh[b] !== ND && Hh[cc] !== ND && Hh[d] !== ND) idx.push(a, cc, b, b, cc, d);
+  }
+  geoG.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
+  geoG.attributes.position.needsUpdate = true; geoG.attributes.color.needsUpdate = true;
+  geoG.computeVertexNormals(); geoG.computeBoundingSphere();
+  escGeral.scale.z = S.ex.geral;
+}
+function pickGeral(ray) {          // marcha sobre o campo de alturas (mais leve que raycast em 600 mil triângulos)
+  const o = ray.origin, d = ray.direction; if (d.z >= 0) return null;
+  const A = G[S.prod][S.alt], ex = S.ex.geral, topo = 62.5 * ex;
+  const t0 = Math.max(0, (o.z - topo) / -d.z), t1 = (o.z + 3) / -d.z;
+  const passos = 600, p = new THREE.Vector3();
+  for (let s = 0; s <= passos; s++) {
+    const t = t0 + (t1 - t0) * s / passos; p.copy(d).multiplyScalar(t).add(o);
+    const col = p.x / M.mx + M.W / 2, lin = M.H / 2 - p.y / M.my;
+    const j = Math.floor(col / M.bloco), i = Math.floor(lin / M.bloco);
+    if (i < 0 || j < 0 || i >= M.Hb || j >= M.Wb) continue;
+    const k = i * M.Wb + j; if (!dentroB[k]) continue;
+    const h = A[k] === ND ? 0 : metros(A[k]) * ex;
+    if (p.z <= h + 1) return k;
+  }
+  return null;
+}
+
+// ---------- janela 3D ----------
+let cilindros = [], infoJanela = null;
+const geoCil = new THREE.CylinderGeometry(12.5, 12.5, 1, 28, 1, false).rotateX(Math.PI / 2).translate(0, 0, 0.5);
+const geoAro = new THREE.EdgesGeometry(geoCil, 20);
+function raio(h) { return clamp(0.18 * h + 1.2, 1.8, 7); }
+
+function nuvem(J, p, ox, n, dens) {
+  const A = J[p], area = M.mx * M.my, PT = Math.max(3, Math.round(9 * dens)), GR = Math.max(2, Math.round(6 * dens));
+  const semente = k => (k * 2654435761 ^ 0x9e3779b9) >>> 0;
+  let total = 0; const nt = new Uint16Array(n * n);
+  for (let k = 0; k < n * n; k++) {
+    if (A.fc[k] === ND) continue; total += GR;
+    const fc = frac(A.fc[k]), hd = metros(A.hd[k]); if (fc <= 0 || hd < 1) continue;
+    const r = raio(hd), e = fc * area / (Math.PI * r * r), rng = mulberry32(semente(k));
+    nt[k] = Math.floor(e) + (rng() < e % 1 ? 1 : 0); total += nt[k] * (PT + 1);
+  }
+  const pos = new Float32Array(total * 3), col = new Float32Array(total * 3), c = new THREE.Color();
+  let q = 0;
+  const put = (x, y, z, cor) => { pos[3 * q] = x; pos[3 * q + 1] = y; pos[3 * q + 2] = z; col[3 * q] = cor.r; col[3 * q + 1] = cor.g; col[3 * q + 2] = cor.b; q++; };
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const k = i * n + j; if (A.fc[k] === ND) continue;
+    const x0 = ox + (j - n / 2) * M.mx, y0 = (n / 2 - i) * M.my;
+    const rng = mulberry32(semente(k)); rng();
+    const fc = frac(A.fc[k]), hd = metros(A.hd[k]), ht = Math.max(metros(A.ht[k]), hd), icea = frac(A.icea[k]);
+    for (let g = 0; g < GR; g++) { const s = 0.75 + 0.35 * rng(); c.setRGB(SOLO.r * s, SOLO.g * s, SOLO.b * s); put(x0 + rng() * M.mx, y0 - rng() * M.my, rng() * 0.3, c); }
+    for (let t = 0; t < nt[k]; t++) {
+      const cx = x0 + rng() * M.mx, cy = y0 - rng() * M.my;
+      const hi = clamp(hd * (0.82 + 0.36 * rng()), Math.min(5, hd), ht);
+      const r = raio(hi), dc = Math.min(0.42 * hi, 1.7 * r);
+      for (let s = 0; s < PT; s++) {
+        const a = rng() * Math.PI * 2, u = Math.sqrt(rng());
+        const z = hi - dc * u * u - rng() * 0.18 * dc;
+        if (S.cor === 'altura') rampa(z / H_MAX.janela, c);
+        else { rampa(S.cor === 'icea' ? icea : fc, c); c.multiplyScalar(0.7 + 0.3 * z / hi); }
+        put(cx + Math.cos(a) * u * r, cy + Math.sin(a) * u * r, z, c);
+      }
+      const zt = rng() * (hi - dc); c.setRGB(0.42, 0.33, 0.22); put(cx, cy, zt, c);   // tronco
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos.subarray(0, q * 3), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col.subarray(0, q * 3), 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.7, vertexColors: true, sizeAttenuation: true }));
+  pts.userData.n = q; return pts;
+}
+
+async function construirJanela() {
+  descarta(gJanela); gJanela.clear(); cilindros = []; limparRotulos();
+  const w = S.janela, jd = D.janelas[w], J = await dadosJanela(w), n = jd.n;
+  const wx = n * M.mx, wy = n * M.my, vao = 0.18 * wx, passo = wx + vao;
+  const prods = S.comparar ? PROD : [S.prod], dens = S.comparar ? S.dens * 0.6 : S.dens;
+  const esc = new THREE.Group(); esc.scale.z = S.ex.janela; gJanela.add(esc); gJanela.userData.esc = esc;
+  gJanela.userData.passo = passo; gJanela.userData.prods = prods;
+  const pegs = D.pegadas.filter(f => f[0] >= jd.c0 && f[0] < jd.c0 + n && f[1] >= jd.r0 && f[1] < jd.r0 + n);
+  let npts = 0;
+  prods.forEach((p, idx) => {
+    const ox = S.comparar ? (idx - 1) * passo : 0;
+    const placa = new THREE.Mesh(new THREE.PlaneGeometry(wx, wy), new THREE.MeshBasicMaterial({ color: css('--gap'), transparent: true, opacity: 0.55 }));
+    placa.position.set(ox, 0, -0.6); gJanela.add(placa);
+    const borda = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => new THREE.Vector3(ox + a * wx / 2, b * wy / 2, 0))),
+      new THREE.LineBasicMaterial({ color: 0xf4dc9c, transparent: true, opacity: 0.6 }));
+    gJanela.add(borda);
+    const nv = nuvem(J, p, ox, n, dens); npts += nv.userData.n; esc.add(nv);
+    if (S.peg) for (const f of pegs) {
+      const x = ox + (f[0] - jd.c0 - n / 2) * M.mx, y = (n / 2 - (f[1] - jd.r0)) * M.my, c = rampa(f[3], new THREE.Color());
+      const m = new THREE.Mesh(geoCil, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.62, depthWrite: false }));
+      m.position.set(x, y, 0); m.scale.z = Math.max(f[2], 0.5); m.userData = { f, p };
+      const aro = new THREE.LineSegments(geoAro, new THREE.LineBasicMaterial({ color: 0x5cc8d8 }));
+      m.add(aro); esc.add(m); cilindros.push(m);
+    }
+    if (S.comparar) addRotulo(`${NOME[p]}`, new THREE.Vector3(ox, wy / 2 + 120, 0), 'prod');
+  });
+  infoJanela = { jd, J, pegs, npts };
+  statsJanela();
+}
+
+// ---------- rótulos HTML ----------
+const camadaRot = $('rotulos'); let rotulos = [];
+function addRotulo(html, v, cls = '', clique) {
+  const el = document.createElement('div'); el.className = 'rotulo ' + cls; el.innerHTML = html;
+  if (clique) { el.classList.add('clic'); el.addEventListener('click', clique); }
+  camadaRot.appendChild(el); rotulos.push({ el, v });
+}
+function limparRotulos() { rotulos.forEach(r => r.el.remove()); rotulos = []; }
+const vtmp = new THREE.Vector3();
+function moverRotulos() {
+  for (const r of rotulos) {
+    vtmp.copy(r.v).project(camera);
+    if (vtmp.z > 1) { r.el.style.display = 'none'; continue; }
+    r.el.style.display = '';
+    r.el.style.transform = `translate(${(vtmp.x * .5 + .5) * innerWidth}px,${(-vtmp.y * .5 + .5) * innerHeight}px) translate(-50%,-120%)`;
+  }
+}
+
+// ---------- painéis ----------
+function tabelaCorredor() {
+  const N = D.numeros || {}, linhas = [['ICEA médio', N.icea_medio, 3], ['RMSE do ICEA', N.rmse_icea, 3], ['CCC do ICEA', N.ccc_icea, 3], ['RMSE altura (m)', N.rmse_altura, 2]];
+  let h = '<thead><tr><th></th>' + PROD.map(p => `<th class="${p === S.prod ? 'atual' : ''}">${NOME[p]}</th>`).join('') + '</tr></thead><tbody>';
+  for (const [rot, obj, d] of linhas) if (obj && Object.keys(obj).length)
+    h += `<tr><td>${rot}</td>` + PROD.map(p => `<td class="${p === S.prod ? 'atual' : ''}">${fmt(obj[p], d)}</td>`).join('') + '</tr>';
+  $('tb-corredor').innerHTML = h + '</tbody>';
+}
+function statsJanela() {
+  const box = $('st-janela');
+  if (S.modo !== 'janela' || !infoJanela) { box.innerHTML = ''; return; }
+  const { jd, J, pegs, npts } = infoJanela, n = jd.n, ha = n * n * M.mx * M.my / 1e4;
+  const est = {};
+  for (const p of PROD) {
+    const A = J[p]; let si = 0, sf = 0, sh = 0, nv = 0, nh = 0;
+    for (let k = 0; k < n * n; k++) { if (A.icea[k] === ND) continue; nv++; si += frac(A.icea[k]); sf += frac(A.fc[k]); if (A.fc[k] > 0) { sh += metros(A.hd[k]); nh++; } }
+    est[p] = { icea: si / nv, fc: sf / nv, hd: nh ? sh / nh : NaN, pi: pegs.length ? pegs.reduce((s, f) => s + f[IDX_ICEA[p]], 0) / pegs.length : NaN };
+  }
+  const ref = pegs.length ? pegs.reduce((s, f) => s + f[3], 0) / pegs.length : NaN;
+  const td = (p, v, d) => `<td class="${p === S.prod ? 'atual' : ''}">${fmt(v, d)}</td>`;
+  box.innerHTML = `<h2>Janela ${S.janela + 1} · ${jd.nome}</h2>
+    <p class="fonte" style="margin-top:-4px">${fmt(ha, 0)} ha · centro ${fmt(jd.lat, 3)}°, ${fmt(jd.lon, 3)}° · ${npts.toLocaleString('pt-BR')} pontos sintéticos</p>
+    <table><thead><tr><th>nesta janela</th>${PROD.map(p => `<th class="${p === S.prod ? 'atual' : ''}">${NOME[p]}</th>`).join('')}</tr></thead><tbody>
+    <tr><td>ICEA médio</td>${PROD.map(p => td(p, est[p].icea, 3)).join('')}</tr>
+    <tr><td>fc médio</td>${PROD.map(p => td(p, est[p].fc, 3)).join('')}</tr>
+    <tr><td>hd médio (m)</td>${PROD.map(p => td(p, est[p].hd, 1)).join('')}</tr>
+    <tr><td>ICEA nas pegadas</td>${PROD.map(p => td(p, est[p].pi, 3)).join('')}</tr>
+    </tbody></table>
+    <p class="fonte">Calculado no navegador a partir do I01 (células de 30 m da janela). Pegadas GEDI na janela: n = ${pegs.length}; ICEA de referência médio = ${fmt(ref, 3)}.</p>`;
+}
+function legenda() {
+  const alt = S.cor === 'altura', hm = H_MAX[S.modo];
+  $('leg-nome').textContent = alt ? (S.modo === 'geral' ? (S.alt === 'ht' ? 'Altura de topo (m)' : 'hd · altura média ≥ 5 m (m)') : 'Altura do ponto (m)')
+    : S.cor === 'icea' ? 'ICEA (0–1)' : 'Cobertura fc ≥ 5 m (0–1)';
+  $('leg-prod').textContent = S.modo === 'janela' && S.comparar ? 'LANG · GEDI · META' : NOME[S.prod];
+  $('leg-barra').style.background = `linear-gradient(90deg,${RAMPA_HEX.join(',')})`;
+  const ticks = alt ? [0, .2, .4, .6, .8, 1].map(t => fmt(t * hm, 0)) : ['0', '0,25', '0,5', '0,75', '1'];
+  $('leg-ticks').innerHTML = ticks.map(t => `<span>${t}</span>`).join('');
+  const ex = [];
+  if (S.modo === 'geral') ex.push(`<span><i style="background:${css('--gap')}"></i>sem dado</span>`, `<span><i style="background:#f4dc9c"></i>limite · janelas</span>`);
+  else ex.push(`<span><i style="background:#b98b4e"></i>solo / sem dossel ≥ 5 m</span>`);
+  if (S.peg) ex.push(`<span><i style="background:linear-gradient(90deg,${RAMPA_HEX[1]},${RAMPA_HEX[4]})"></i>pegadas GEDI (contorno ciano) · ICEA de referência</span>`);
+  $('leg-extra').innerHTML = ex.join('');
+}
+
+// ---------- dica (hover) ----------
+const dica = $('dica'), ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let mouseXY = null, ultimaPick = 0, sujo = false;
+renderer.domElement.addEventListener('pointermove', e => { mouseXY = [e.clientX, e.clientY]; sujo = true; });
+renderer.domElement.addEventListener('pointerleave', () => { mouseXY = null; dica.style.display = 'none'; });
+function linhaProdutos(vals, d) { return PROD.map(p => `<td class="${p === S.prod ? 'atual' : ''}">${vals[p] == null ? '–' : fmt(vals[p], d)}</td>`).join(''); }
+function mostrarDica(html) {
+  dica.innerHTML = html; dica.style.display = 'block';
+  const [x, y] = mouseXY, w = dica.offsetWidth, h = dica.offsetHeight;
+  dica.style.left = Math.min(x + 16, innerWidth - w - 8) + 'px'; dica.style.top = Math.min(y + 16, innerHeight - h - 8) + 'px';
+}
+function cab() { return `<thead><tr><th></th>${PROD.map(p => `<th class="${p === S.prod ? 'atual' : ''}">${NOME[p]}</th>`).join('')}</tr></thead>`; }
+function pick() {
+  if (!mouseXY) return;
+  mouse.set(mouseXY[0] / innerWidth * 2 - 1, -mouseXY[1] / innerHeight * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  if (S.modo === 'geral') {
+    const k = pickGeral(ray.ray); if (k == null) { dica.style.display = 'none'; return; }
+    const v = (key, f) => Object.fromEntries(PROD.map(p => [p, G[p][key][k] === ND ? null : f(G[p][key][k])]));
+    mostrarDica(`<h3>Bloco de ~${fmt(M.bloco * M.mx, 0)} m · média</h3><table>${cab()}<tbody>
+      <tr><td>ICEA</td>${linhaProdutos(v('icea', frac), 2)}</tr><tr><td>fc</td>${linhaProdutos(v('fc', frac), 2)}</tr>
+      <tr><td>hd (m)</td>${linhaProdutos(v('hd', metros), 1)}</tr><tr><td>topo (m)</td>${linhaProdutos(v('ht', metros), 1)}</tr></tbody></table>`);
+    return;
+  }
+  if (!infoJanela) return;
+  const hit = ray.intersectObjects(cilindros, false)[0];
+  if (hit) {
+    const f = hit.object.userData.f;
+    mostrarDica(`<h3>Pegada GEDI (lidar)</h3><table><tbody>
+      <tr><td>RH98</td><td>${fmt(f[2], 1)} m</td></tr><tr><td>cover_z1</td><td>${fmt(f[4], 2)}</td></tr>
+      <tr><td>ICEA de referência</td><td>${fmt(f[3], 2)}</td></tr></tbody></table>
+      <table style="margin-top:4px">${cab()}<tbody><tr><td>ICEA</td>${linhaProdutos(Object.fromEntries(PROD.map(p => [p, f[IDX_ICEA[p]]])), 2)}</tr>
+      <tr><td>altura (m)</td>${linhaProdutos(Object.fromEntries(PROD.map(p => [p, f[IDX_H[p]]])), 1)}</tr></tbody></table>
+      <p class="fonte" style="margin:4px 0 0">T05; altura META = máximo no círculo da pegada.</p>`);
+    return;
+  }
+  const pt = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), pt)) { dica.style.display = 'none'; return; }
+  const { jd, J } = infoJanela, n = jd.n, passo = gJanela.userData.passo;
+  const idx = S.comparar ? clamp(Math.round(pt.x / passo) + 1, 0, 2) : 0, ox = S.comparar ? (idx - 1) * passo : 0;
+  const j = Math.floor((pt.x - ox) / M.mx + n / 2), i = Math.floor(n / 2 - pt.y / M.my);
+  if (i < 0 || j < 0 || i >= n || j >= n) { dica.style.display = 'none'; return; }
+  const k = i * n + j, v = (key, f) => Object.fromEntries(PROD.map(p => [p, J[p][key][k] === ND ? null : f(J[p][key][k])]));
+  mostrarDica(`<h3>Célula de 30 m${S.comparar ? ' · ' + NOME[PROD[idx]] : ''}</h3><table>${cab()}<tbody>
+    <tr><td>ICEA</td>${linhaProdutos(v('icea', frac), 2)}</tr><tr><td>fc</td>${linhaProdutos(v('fc', frac), 2)}</tr>
+    <tr><td>hd (m)</td>${linhaProdutos(v('hd', metros), 1)}</tr><tr><td>topo (m)</td>${linhaProdutos(v('ht', metros), 1)}</tr></tbody></table>`);
+}
+
+// ---------- câmera ----------
+function enquadrar() {
+  if (S.modo === 'geral') {
+    const L = M.W * M.mx;
+    camera.near = 50; camera.far = 3e6; controls.minDistance = 2000; controls.maxDistance = 6e5;
+    controls.target.set(0, -0.04 * L, 0); camera.position.set(-0.18 * L, -0.92 * L, 0.62 * L);
+  } else {
+    const wx = D.janelas[S.janela].n * M.mx, L = S.comparar ? 3.4 * wx : wx;
+    camera.near = 1; camera.far = 2e5; controls.minDistance = 30; controls.maxDistance = 6 * L;
+    controls.target.set(0, 0, 0); camera.position.set(-0.35 * L, -0.95 * L, 0.55 * L);
+  }
+  camera.updateProjectionMatrix(); controls.update();
+}
+
+// ---------- estado -> cena ----------
+function rotulosGeral() {
+  limparRotulos();
+  D.janelas.forEach((jd, w) => addRotulo(String(w + 1), new THREE.Vector3(...xy(jd.c0 + jd.n / 2, jd.r0), 0), '', () => irJanela(w)));
+}
+async function aplicarModo() {
+  const g = S.modo === 'geral';
+  gGeral.visible = g; gJanela.visible = !g;
+  document.querySelectorAll('#modo button').forEach(b => b.classList.toggle('on', b.dataset.modo === S.modo));
+  $('bloco-alt').style.display = g ? '' : 'none';
+  $('bloco-janela').style.display = g ? 'none' : '';
+  const ex = $('ex'); ex.max = g ? 200 : 10; ex.step = g ? 1 : 0.5; ex.value = S.ex[S.modo]; $('ex-v').textContent = '×' + S.ex[S.modo];
+  marcarJanelas();
+  if (g) { atualizarGeral(); rotulosGeral(); statsJanela(); }
+  else await construirJanela();
+  legenda(); enquadrar();
+}
+function marcarJanelas() { document.querySelectorAll('.janela').forEach((b, w) => b.classList.toggle('on', S.modo === 'janela' && w === S.janela)); }
+async function irJanela(w) { S.janela = w; S.modo = 'janela'; await aplicarModo(); }
+async function redesenhar() {
+  tabelaCorredor();
+  if (S.modo === 'geral') atualizarGeral(); else await construirJanela();
+  legenda();
+}
+
+// ---------- controles ----------
+function chips(id, attr, chave) {
+  $(id).addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    S[chave] = b.dataset[attr];
+    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    await redesenhar();
+  });
+}
+chips('prod', 'p', 'prod'); chips('cor', 'c', 'cor'); chips('alt', 'a', 'alt');
+$('modo').addEventListener('click', async e => { const b = e.target.closest('button'); if (!b || b.dataset.modo === S.modo) return; S.modo = b.dataset.modo; await aplicarModo(); });
+$('ex').addEventListener('input', e => {
+  const v = +e.target.value; S.ex[S.modo] = v; $('ex-v').textContent = '×' + v;
+  if (S.modo === 'geral') escGeral.scale.z = v; else if (gJanela.userData.esc) gJanela.userData.esc.scale.z = v;
+});
+let tDens; $('dens').addEventListener('input', e => { S.dens = +e.target.value; $('dens-v').textContent = '×' + S.dens; clearTimeout(tDens); tDens = setTimeout(() => S.modo === 'janela' && construirJanela(), 180); });
+$('comparar').addEventListener('change', async e => { S.comparar = e.target.checked; await construirJanela(); legenda(); enquadrar(); });
+$('tg-peg').addEventListener('change', async e => { S.peg = e.target.checked; pegG.visible = S.peg; if (S.modo === 'janela') await construirJanela(); legenda(); });
+$('tg-lim').addEventListener('change', e => { S.lim = e.target.checked; limG.forEach(l => l.visible = S.lim); });
+$('tg-giro').addEventListener('change', e => { controls.autoRotate = e.target.checked; });
+$('bt-reset').addEventListener('click', enquadrar);
+$('bt-png').addEventListener('click', () => {
+  renderer.setClearColor(new THREE.Color(css('--bg')), 1); renderer.render(scene, camera);
+  const a = document.createElement('a'); a.download = `ICEA_3D_${S.modo === 'geral' ? 'corredor' : 'janela' + (S.janela + 1)}_${S.comparar && S.modo === 'janela' ? 'comparacao' : S.prod}_${S.cor}.png`;
+  a.href = renderer.domElement.toDataURL('image/png'); a.click(); renderer.setClearColor(0x000000, 0);
+});
+function aplicarTema() {
+  if (baseG) baseG.material.color.set(css('--gap'));
+  if (S.modo === 'janela' && gJanela.children.length) construirJanela();
+  legenda();
+}
+$('bt-tema').addEventListener('click', () => {
+  const escuro = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() === '#08110f';
+  document.documentElement.dataset.theme = escuro ? 'light' : 'dark';
+  try { localStorage.setItem('icea3d-tema', document.documentElement.dataset.theme); } catch (e) {}
+  aplicarTema();
+});
+$('bt-painel').addEventListener('click', () => { $('pnl-dir').classList.toggle('aberto'); document.body.classList.toggle('dir-aberto'); });
+try { const t = localStorage.getItem('icea3d-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// ---------- início ----------
+async function iniciar() {
+  $('href').textContent = M.h_ref; $('bloco-m').textContent = `~${fmt(M.bloco * M.mx, 0)} m`; $('dens-v').textContent = '×1';
+  for (const p of PROD) { G[p] = {}; for (const k of ['icea', 'fc', 'hd', 'ht']) G[p][k] = await dz(D.geral[p][k]); }
+  dentroB = await dz(D.dentro);
+  $('lista-janelas').innerHTML = D.janelas.map((jd, w) =>
+    `<button class="janela" data-w="${w}"><b>${w + 1}</b><span>${jd.nome}<small>${jd.npeg} pegadas GEDI · ${fmt(jd.lat, 2)}°, ${fmt(jd.lon, 2)}°</small></span></button>`).join('');
+  $('lista-janelas').addEventListener('click', e => { const b = e.target.closest('.janela'); if (b) irJanela(+b.dataset.w); });
+  iniciarGeral(); tabelaCorredor();
+  await aplicarModo();
+  $('carregando').classList.add('fim');
+}
+function animar(t) {
+  requestAnimationFrame(animar);
+  controls.update();
+  if (sujo && t - ultimaPick > 70) { ultimaPick = t; sujo = false; pick(); }
+  renderer.render(scene, camera); moverRotulos();
+}
+controls.addEventListener('change', () => { if (mouseXY) sujo = true; });
+iniciar().then(() => requestAnimationFrame(animar)).catch(err => { $('carregando').textContent = 'Erro ao carregar: ' + err.message; console.error(err); });
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "Se usar este visualizador ou os dados derivados, cite assim."
+title: "ICEA 3D: visualização da estrutura do dossel no Corredor Ecológico da Bacia do Rio São Lourenço (MT)"
+abstract: >-
+  Visualizador 3D (Three.js) do Índice de Cobertura pela Estrutura Arbórea (ICEA)
+  a partir dos mapas globais de altura do dossel LANG, GEDI/Potapov e META,
+  com pegadas do lidar GEDI como referência.
+authors:
+  - family-names: Aranha
+    given-names: David Albuquerque
+    orcid: "https://orcid.org/0009-0005-1631-1676"
+    affiliation: "Universidade Federal de Rondonópolis (UFR)"
+type: software
+license: MIT
+date-released: "2026-11-25"
+version: "1.0.0"
+keywords:
+  - canopy height
+  - GEDI
+  - Cerrado
+  - three.js
+  - ecological corridor
