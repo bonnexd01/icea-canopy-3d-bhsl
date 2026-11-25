@@ -12,12 +12,12 @@ Visualização 3D interativa (Three.js) do **Índice de Cobertura pela Estrutura
 
 ## O que a página mostra
 
-| Modo | Conteúdo |
+| Elemento | Conteúdo |
 |---|---|
-| **Corredor** | o corredor inteiro como relevo do dossel (médias em blocos de 10 × 10 células, ~270 m). A altura da superfície é o topo ou o hd; a cor é o ICEA, a cobertura fc ou a altura. Cinza = sem dado (falhas do LANG). |
-| **Janela 3D** | quatro recortes de 128 × 128 células (~3,5 km) na grade de 30 m, escolhidos pelo script: dossel fechado (consenso dos 3 produtos), mosaico floresta–savana, maior divergência entre produtos e mais pegadas GEDI. |
-| **Comparar** | LANG, GEDI e META lado a lado na mesma janela. |
-| **Pegadas GEDI** | colunas de raio 12,5 m com a altura RH98 medida pelo lidar e a cor pelo ICEA de referência. |
+| **Mapa** | imagem de satélite do planeta inteiro (Esri World Imagery, via MapLibre GL). A página abre no globo e voa até o corredor; "Ver o planeta" afasta de novo. |
+| **Corredor 3D** | o corredor inteiro como relevo do dossel sobre o satélite (Three.js dentro do mapa), em blocos de 10 × 10 células (~270 m). A altura é o topo ou o hd, com exagero vertical que diminui sozinho ao aproximar; a cor é o ICEA, a cobertura fc ou a altura; a opacidade deixa ver o satélite por baixo. Cinza = sem dado (falhas do LANG). |
+| **Pegadas GEDI** | círculos no mapa (raio real de 12,5 m ao aproximar), com a cor pelo ICEA de referência. |
+| **Janela 3D** | ao clicar numa janela, o mapa voa até ela e a nuvem de pontos abre no canto, como na referência. São quatro recortes de 128 × 128 células (~3,5 km): dossel fechado (consenso dos 3 produtos), mosaico floresta–savana, maior divergência entre produtos e mais pegadas GEDI. As pegadas viram colunas com a altura RH98. O botão **Comparar** põe LANG, GEDI e META lado a lado, e **⤢** amplia o painel. |
 
 Ao passar o cursor, a página mostra os valores dos três produtos na célula ou na pegada. O botão **Salvar PNG** grava a vista atual.
 
@@ -90,7 +90,8 @@ web/       modelo HTML/JS do visualizador (Three.js r160)
 
 ## Tecnologia
 
-- Three.js 0.160 (ES modules via jsDelivr) com OrbitControls;
+- MapLibre GL JS 4.7.1 com imagens Esri World Imagery;
+- Three.js 0.160 (ES modules via jsDelivr) como camada 3D do mapa e na janela de detalhe, com OrbitControls;
 - fontes Bricolage Grotesque e Manrope;
 - nenhum bundler.
 
