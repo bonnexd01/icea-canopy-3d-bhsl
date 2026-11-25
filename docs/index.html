@@ -101,6 +101,18 @@ body.inset-aberto #inset{display:flex}
 .mk{font:800 12px "Bricolage Grotesque";color:#08110f;background:#f4dc9c;padding:3px 8px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer}
 #ins-rot{position:absolute;inset:0;pointer-events:none}
 .rotulo{position:absolute;left:0;top:0;white-space:nowrap;font:800 13px "Bricolage Grotesque";color:#08110f;background:#f4dc9c;padding:3px 10px;border-radius:999px}
+#tour{top:16px;left:50%;transform:translateX(-50%);width:min(760px,calc(100vw - 32px));padding:14px 18px 12px;display:none}
+body.tour #tour{display:block}
+body.tour #pnl-esq,body.tour #pnl-dir,body.tour #legenda{display:none}
+#tour-tit{font:800 20px/1.15 "Bricolage Grotesque";color:var(--acc);margin-bottom:4px}
+#tour-txt{font-size:14px;line-height:1.45}
+#tour-ctl{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+#tour-ctl button{font:inherit;color:var(--tx);cursor:pointer;border:1px solid var(--line);background:var(--chip);border-radius:9px;padding:4px 10px;font-size:12.5px;font-weight:700}
+#tour-ctl button:hover{border-color:var(--acc2)}
+#tour-rec.on{background:#b3261e;border-color:#e0584f;color:#fff}
+#tour-pos{flex:1;display:flex;gap:5px;align-items:center;justify-content:center}
+#tour-pos i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+#tour-pos i.on{background:var(--acc)}
 #carregando{position:fixed;inset:0;display:grid;place-items:center;z-index:20;background:var(--bg);color:var(--tx2);font-weight:600;transition:opacity .5s}
 #carregando.fim{opacity:0;pointer-events:none}
 #bt-painel{display:none}
@@ -163,6 +175,9 @@ body.inset-aberto #inset{display:flex}
   <input type="range" id="ex" min="1" max="200" step="1">
   <div class="rot">Opacidade do corredor <output id="op-v"></output></div>
   <input type="range" id="op" min="0" max="1" step="0.05" value="0.9">
+  <div class="rot">Terreno real (SRTM) <output id="tt-v"></output></div>
+  <label class="tg"><input type="checkbox" id="tg-terreno" checked> Relevo do terreno em 3D, com céu e sombreamento</label>
+  <input type="range" id="tt" min="1" max="6" step="0.5">
 
   <div class="rot">Janelas de detalhe · 30 m</div>
   <div class="janelas" id="lista-janelas"></div>
@@ -174,6 +189,7 @@ body.inset-aberto #inset{display:flex}
   </div>
 
   <div class="acoes">
+    <button id="bt-tour" style="flex-basis:100%;background:var(--chip-on);border-color:var(--acc2);color:var(--acc)">▶ Modo apresentação (tour guiado e vídeo)</button>
     <button id="bt-corredor">Ir ao corredor</button>
     <button id="bt-planeta">Ver o planeta</button>
     <button id="bt-png">Salvar PNG</button>
@@ -187,6 +203,8 @@ body.inset-aberto #inset{display:flex}
     <p><b>Mapa:</b> o corredor inteiro aparece em 3D sobre a imagem de satélite, em blocos de <span id="bloco-m"></span>. A superfície sobe com a altura do dossel (com exagero vertical) e a cor mostra a variável escolhida. Use a opacidade para ver o satélite por baixo. Arraste para mover, botão direito ou Ctrl + arrastar para inclinar e girar, role para aproximar; "Ver o planeta" afasta até o globo inteiro.</p>
     <p><b>Janela 3D</b> (canto inferior direito): nuvem de pontos <b>sintética</b>. Cada célula de 30 m recebe copas em número proporcional a fc, com altura entre hd e o topo; as posições são sorteadas com semente fixa. Não é lidar: mostra a estrutura que cada produto atribui ao dossel.</p>
     <p><b>Pegadas GEDI:</b> lidar real (raio 12,5 m), cor pelo ICEA de referência <code>cover_z1 × min(RH98 / H<sub>REF</sub>, 1)</code>. Na janela 3D, viram colunas com a altura RH98.</p>
+    <p><b>Terreno:</b> modelo digital de elevação (SRTM e outras fontes, AWS Terrain Tiles) com sombreamento e céu atmosférico; o relevo do dossel fica por cima do terreno. <b>EDL</b> (Eye-Dome Lighting) é o sombreamento por profundidade usado em visualizadores lidar como o Potree: realça a forma das copas na nuvem de pontos.</p>
+    <p><b>Modo apresentação:</b> tour guiado com voos de câmera e legendas; "Gravar vídeo" salva o tour inteiro em .webm para slides.</p>
     <p>Imagem de satélite: Esri World Imagery. Visual inspirado em <i>lidar-mangrove-canopy</i> (linaq11).</p>
   </details>
 </section>
@@ -209,6 +227,7 @@ body.inset-aberto #inset{display:flex}
   <div id="ins-cab">
     <div id="ins-tit"></div>
     <button class="ins-bt" id="ins-comparar" title="LANG, GEDI e META lado a lado">Comparar</button>
+    <button class="ins-bt on" id="ins-edl" title="Eye-Dome Lighting: sombreamento por profundidade usado em nuvens lidar (Potree, CloudCompare)">EDL</button>
     <button class="ins-bt" id="ins-dens" title="Densidade de pontos">Densidade ×1</button>
     <button class="ins-bt" id="ins-grande" title="Ampliar">⤢</button>
     <button class="ins-bt" id="ins-fechar" title="Fechar">✕</button>
@@ -217,6 +236,18 @@ body.inset-aberto #inset{display:flex}
   <div id="ins-rod">Nuvem sintética a partir de fc, hd e topo (não é lidar) · colunas = pegadas GEDI · escala vertical ×<span id="ins-ex"></span> · arraste para girar, role para aproximar.</div>
 </section>
 
+<section class="painel" id="tour">
+  <div id="tour-tit"></div>
+  <div id="tour-txt"></div>
+  <div id="tour-ctl">
+    <button id="tour-ant" title="Anterior">◀</button>
+    <button id="tour-pausa" title="Pausar">❚❚</button>
+    <button id="tour-prox" title="Próximo">▶</button>
+    <span id="tour-pos"></span>
+    <button id="tour-rec" title="Grava o tour inteiro em vídeo .webm (mapa, janela 3D e legendas)">● Gravar vídeo</button>
+    <button id="tour-sair" title="Sair do modo apresentação">✕</button>
+  </div>
+</section>
 <div id="dica"></div>
 <div id="carregando">Descompactando os dados do ICEA…</div>
 
@@ -233,7 +264,8 @@ const RAMPA_HEX = ['#123a3f', '#1f6b5c', '#2f9a6a', '#8cc35a', '#e2c84f', '#f39a
 const RAMPA = RAMPA_HEX.map(h => new THREE.Color(h));
 const SOLO = new THREE.Color('#b98b4e');
 const ND = 255, H_MAX = { geral: 25, janela: 30 };
-const S = { prod: 'lang', cor: 'icea', alt: 'ht', ex: 60, exJ: 3, op: 0.9, janela: -1, comparar: false, peg: true, lim: true, dens: 1, grande: false };
+const S = { prod: 'lang', cor: 'icea', alt: 'ht', ex: 60, exJ: 3, op: 0.9, janela: -1, comparar: false, peg: true, lim: true, dens: 1, grande: false,
+            terreno: true, T: 2.5, edl: true };
 
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -270,16 +302,21 @@ async function dadosJanela(w) {
 }
 
 // ================= MAPA (satélite do planeta inteiro) =================
+const TERRARIUM = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
 const map = new maplibregl.Map({
   container: 'mapa', center: centro, zoom: 1.3, pitch: 0, bearing: 0, maxPitch: 80, preserveDrawingBuffer: true,
   attributionControl: { compact: true },
   style: { version: 8,
     sources: { sat: { type: 'raster', tileSize: 256, maxzoom: 19,
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      attribution: 'Imagens © Esri, Maxar, Earthstar Geographics' } },
-    layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0b1a26' } }, { id: 'sat', type: 'raster', source: 'sat' }] },
+      attribution: 'Imagens © Esri, Maxar, Earthstar Geographics' },
+      dem: { type: 'raster-dem', tiles: [TERRARIUM], encoding: 'terrarium', tileSize: 256, maxzoom: 14, attribution: 'Relevo: AWS Terrain Tiles (SRTM e outras fontes)' },
+      demhs: { type: 'raster-dem', tiles: [TERRARIUM], encoding: 'terrarium', tileSize: 256, maxzoom: 14 } },
+    layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0b1a26' } }, { id: 'sat', type: 'raster', source: 'sat' },
+      { id: 'relevo', type: 'hillshade', source: 'demhs', paint: { 'hillshade-exaggeration': 0.35, 'hillshade-shadow-color': '#0a1410', 'hillshade-highlight-color': '#fff6de', 'hillshade-accent-color': '#2a2a1a' } }] },
 });
 
+window.__mapa = map;   // depuração no console
 const estiloPronto = new Promise(r => {   // estilo pronto, sem esperar as imagens de satélite
   const iv = setInterval(() => { if (map.style && map.style._loaded) { clearInterval(iv); r(); } }, 100);
   map.once('load', () => { clearInterval(iv); r(); });
@@ -298,11 +335,42 @@ const camadaCorredor = {
   id: 'corredor3d', type: 'custom', renderingMode: '3d',
   onAdd(m, gl) { rendMapa = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true }); rendMapa.autoClear = false; },
   render(gl, matrix) {
-    escGeral.scale.z = S.ex * Math.min(1, Math.pow(2, Z_REF - map.getZoom()));   // exagero cai ao aproximar
+    const f = Math.min(1, Math.pow(2, Z_REF - map.getZoom()));   // exagero do dossel cai ao aproximar
+    if (zSujo || Math.abs(f - fZ) > 0.02 * fZ) { aplicarZ(f); fZ = f; zSujo = false; }
+    if (normaisSujas && !map.isMoving()) { geoG.computeVertexNormals(); normaisSujas = false; }
     camMapa.projectionMatrix = new THREE.Matrix4().fromArray(matrix).multiply(modelo);
     rendMapa.resetState(); rendMapa.render(cena, camMapa);
   },
 };
+// relevo: altura do terreno (DEM Terrarium, z 10) em cada vértice, somada ao dossel exagerado
+let elevG = null, hG = null, fZ = 1, zSujo = true, normaisSujas = true;
+function aplicarZ(f) {
+  if (!geoG || !hG) return;
+  const pos = geoG.attributes.position.array, n = hG.length, usaT = S.terreno && elevG;
+  for (let k = 0; k < n; k++) pos[3 * k + 2] = (usaT ? elevG[k] * S.T : 0) + hG[k] * S.ex * f;
+  geoG.attributes.position.needsUpdate = true; normaisSujas = true;
+}
+async function carregarDEM() {
+  const z = 10, N = 2 ** z * 256, R = Math.PI / 180;
+  const gx = lo => (lo + 180) / 360 * N, gy = la => (1 - Math.log(Math.tan(la * R) + 1 / Math.cos(la * R)) / Math.PI) / 2 * N;
+  const x0 = Math.floor(gx(M.left) / 256), x1 = Math.floor(gx(M.left + M.W * M.px) / 256);
+  const y0 = Math.floor(gy(M.top) / 256), y1 = Math.floor(gy(M.top - M.H * M.px) / 256);
+  const tiles = {}, cv = document.createElement('canvas'); cv.width = cv.height = 256; const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const lista = []; for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) lista.push([x, y]);
+  await Promise.all(lista.map(async ([x, y]) => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.src = TERRARIUM.replace('{z}', z).replace('{x}', x).replace('{y}', y); await img.decode();
+    ctx.drawImage(img, 0, 0); const d = ctx.getImageData(0, 0, 256, 256).data, e = new Float32Array(65536);
+    for (let i = 0; i < 65536; i++) e[i] = d[4 * i] * 256 + d[4 * i + 1] + d[4 * i + 2] / 256 - 32768;
+    tiles[x + ',' + y] = e;
+  }));
+  const px = (ix, iy) => { const t = tiles[(ix >> 8) + ',' + (iy >> 8)]; return t ? t[(iy & 255) * 256 + (ix & 255)] : 0; };
+  const amostra = (lo, la) => { const X = gx(lo) - 0.5, Y = gy(la) - 0.5, ix = Math.floor(X), iy = Math.floor(Y), fx = X - ix, fy = Y - iy;
+    return (px(ix, iy) * (1 - fx) + px(ix + 1, iy) * fx) * (1 - fy) + (px(ix, iy + 1) * (1 - fx) + px(ix + 1, iy + 1) * fx) * fy; };
+  const { Wb, Hb, bloco: B } = M, e = new Float32Array(Wb * Hb);
+  for (let i = 0; i < Hb; i++) for (let j = 0; j < Wb; j++) e[i * Wb + j] = Math.max(0, amostra(...lonlat((j + 0.5) * B, (i + 0.5) * B)));
+  return e;
+}
 function iniciarGeral() {
   const { Wb, Hb, bloco: B } = M, n = Wb * Hb, pos = new Float32Array(n * 3);
   for (let i = 0; i < Hb; i++) for (let j = 0; j < Wb; j++) {
@@ -313,14 +381,15 @@ function iniciarGeral() {
   geoG.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geoG.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
   matG = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: S.op, side: THREE.DoubleSide });
-  escGeral.add(new THREE.Mesh(geoG, matG));
+  const malha = new THREE.Mesh(geoG, matG); malha.frustumCulled = false; escGeral.add(malha);
+  hG = new Float32Array(n);
 }
 function atualizarGeral() {
   const { Wb, Hb } = M, n = Wb * Hb, A = G[S.prod];
   const Hh = A[S.alt], C = S.cor === 'altura' ? A[S.alt] : A[S.cor];
   const pos = geoG.attributes.position.array, col = geoG.attributes.color.array, c = new THREE.Color();
   for (let k = 0; k < n; k++) {
-    pos[3 * k + 2] = Hh[k] === ND ? 0 : metros(Hh[k]);
+    hG[k] = Hh[k] === ND ? 0 : metros(Hh[k]);
     const v = C[k];
     if (v === ND) c.setRGB(0.32, 0.32, 0.32); else rampa(S.cor === 'altura' ? metros(v) / H_MAX.geral : frac(v), c);
     col[3 * k] = c.r; col[3 * k + 1] = c.g; col[3 * k + 2] = c.b;
@@ -331,9 +400,13 @@ function atualizarGeral() {
     if (dentroB[a] && dentroB[b] && dentroB[cc] && dentroB[d]) idx.push(a, cc, b, b, cc, d);
   }
   geoG.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
-  geoG.attributes.position.needsUpdate = true; geoG.attributes.color.needsUpdate = true;
-  geoG.computeVertexNormals(); geoG.computeBoundingSphere();
-  escGeral.scale.z = S.ex; map.triggerRepaint();
+  geoG.attributes.color.needsUpdate = true;
+  zSujo = true; map.triggerRepaint();
+}
+function aplicarTerreno() {
+  try { map.setTerrain(S.terreno && elevG ? { source: 'dem', exaggeration: S.T } : null); } catch (e) { console.warn(e); }
+  map.setLayoutProperty('relevo', 'visibility', S.terreno ? 'visible' : 'none');
+  zSujo = true; map.triggerRepaint();
 }
 function camadasMapa() {
   map.addLayer(camadaCorredor);
@@ -409,6 +482,38 @@ const cenaJ = new THREE.Scene(), camJ = new THREE.PerspectiveCamera(42, 1, 1, 2e
 const ctlJ = new OrbitControls(camJ, rendJ.domElement); ctlJ.enableDamping = true; ctlJ.maxPolarAngle = Math.PI * 0.49; ctlJ.zoomToCursor = true;
 { const h = new THREE.HemisphereLight(0xeef6ee, 0x2a2418, 1.2); h.position.set(0, 0, 1); cenaJ.add(h); const s = new THREE.DirectionalLight(0xfff0d8, 1.8); s.position.set(-1, 1, 1); cenaJ.add(s); }
 const gJanela = new THREE.Group(); cenaJ.add(gJanela);
+// Eye-Dome Lighting (Boucheny 2009; Potree): sombreia cada pixel pela diferença de log-profundidade em relação aos vizinhos
+const edlMat = new THREE.ShaderMaterial({
+  uniforms: { tCor: { value: null }, tProf: { value: null }, res: { value: new THREE.Vector2(1, 1) }, near: { value: 1 }, far: { value: 1e4 }, forca: { value: 0.45 }, raio: { value: 1.4 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `uniform sampler2D tCor; uniform sampler2D tProf; uniform vec2 res; uniform float near; uniform float far; uniform float forca; uniform float raio;
+    varying vec2 vUv;
+    float lin(float d){ float z = d * 2.0 - 1.0; return 2.0 * near * far / (far + near - z * (far - near)); }
+    float viz(vec2 uv, float l, inout float n){ float dn = texture2D(tProf, uv).x; if (dn >= 1.0) return 0.0; n += 1.0; return max(0.0, l - log2(lin(dn))); }
+    void main(){
+      vec4 c = texture2D(tCor, vUv); float d = texture2D(tProf, vUv).x; vec2 p = raio / res; float n = 0.0;
+      float l = d < 1.0 ? log2(lin(d)) : 1e6;
+      float s = viz(vUv + vec2(p.x, 0.0), l, n) + viz(vUv - vec2(p.x, 0.0), l, n) + viz(vUv + vec2(0.0, p.y), l, n) + viz(vUv - vec2(0.0, p.y), l, n)
+              + viz(vUv + p * 0.707, l, n) + viz(vUv - p * 0.707, l, n) + viz(vUv + vec2(p.x, -p.y) * 0.707, l, n) + viz(vUv + vec2(-p.x, p.y) * 0.707, l, n);
+      if (d >= 1.0) { gl_FragColor = n > 0.0 ? vec4(0.0, 0.0, 0.0, 0.55) : c; }
+      else { float sombra = exp(-(s / 8.0) * 300.0 * forca); gl_FragColor = vec4(c.rgb * sombra, c.a); }
+      #include <colorspace_fragment>
+    }`,
+  depthTest: false, depthWrite: false, transparent: true,
+});
+const cenaQ = new THREE.Scene(), camQ = new THREE.Camera(); cenaQ.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), edlMat));
+let rtJ = null; const tamRT = new THREE.Vector2();
+function renderJanela() {
+  const dist = camJ.position.distanceTo(ctlJ.target); camJ.near = Math.max(0.5, dist / 300); camJ.far = dist * 40; camJ.updateProjectionMatrix();
+  if (!S.edl) { rendJ.setRenderTarget(null); rendJ.render(cenaJ, camJ); return; }
+  rendJ.getDrawingBufferSize(tamRT);
+  if (!rtJ || rtJ.width !== tamRT.x || rtJ.height !== tamRT.y) {
+    rtJ?.dispose(); rtJ = new THREE.WebGLRenderTarget(tamRT.x, tamRT.y, { depthTexture: new THREE.DepthTexture(tamRT.x, tamRT.y) });
+  }
+  rendJ.setRenderTarget(rtJ); rendJ.clear(); rendJ.render(cenaJ, camJ); rendJ.setRenderTarget(null);
+  const u = edlMat.uniforms; u.tCor.value = rtJ.texture; u.tProf.value = rtJ.depthTexture; u.res.value.copy(tamRT); u.near.value = camJ.near; u.far.value = camJ.far;
+  rendJ.clear(); rendJ.render(cenaQ, camQ);
+}
 let cilindros = [], infoJanela = null, rotJ = [];
 const geoCil = new THREE.CylinderGeometry(12.5, 12.5, 1, 28, 1, false).rotateX(Math.PI / 2).translate(0, 0, 0.5);
 const geoAro = new THREE.EdgesGeometry(geoCil, 20);
@@ -498,6 +603,7 @@ function fecharJanela() { S.janela = -1; infoJanela = null; document.body.classL
 $('ins-fechar').addEventListener('click', fecharJanela);
 $('ins-grande').addEventListener('click', () => { S.grande = !S.grande; $('inset').classList.toggle('grande', S.grande); $('ins-grande').classList.toggle('on', S.grande); setTimeout(tamanhoInset, 0); });
 $('ins-comparar').addEventListener('click', async () => { S.comparar = !S.comparar; $('ins-comparar').classList.toggle('on', S.comparar); await construirJanela(); enquadrarJanela(); legenda(); });
+$('ins-edl').addEventListener('click', () => { S.edl = !S.edl; $('ins-edl').classList.toggle('on', S.edl); });
 $('ins-dens').addEventListener('click', async () => { const ops = [0.5, 1, 1.5, 2]; S.dens = ops[(ops.indexOf(S.dens) + 1) % ops.length]; $('ins-dens').textContent = 'Densidade ×' + fmt(S.dens, S.dens % 1 ? 1 : 0); await construirJanela(); });
 // dica dentro da janela 3D
 const rayJ = new THREE.Raycaster(), mJ = new THREE.Vector2(); let mouseJ = null, sujoJ = false, tPickJ = 0;
@@ -565,7 +671,9 @@ function chips(id, attr, chave) {
   });
 }
 chips('prod', 'p', 'prod'); chips('cor', 'c', 'cor'); chips('alt', 'a', 'alt');
-$('ex').addEventListener('input', e => { S.ex = +e.target.value; $('ex-v').textContent = '×' + S.ex; escGeral.scale.z = S.ex; map.triggerRepaint(); });
+$('ex').addEventListener('input', e => { S.ex = +e.target.value; $('ex-v').textContent = '×' + S.ex; zSujo = true; map.triggerRepaint(); });
+$('tt').addEventListener('input', e => { S.T = +e.target.value; $('tt-v').textContent = '×' + S.T; aplicarTerreno(); });
+$('tg-terreno').addEventListener('change', e => { S.terreno = e.target.checked; aplicarTerreno(); });
 $('op').addEventListener('input', e => { S.op = +e.target.value; $('op-v').textContent = Math.round(S.op * 100) + '%'; matG.opacity = S.op; escGeral.visible = S.op > 0; map.triggerRepaint(); });
 $('tg-peg').addEventListener('change', async e => { S.peg = e.target.checked; map.setLayoutProperty('pegadas', 'visibility', S.peg ? 'visible' : 'none'); legenda(); if (S.janela >= 0) await construirJanela(); });
 $('tg-lim').addEventListener('change', e => { S.lim = e.target.checked; map.setLayoutProperty('limite', 'visibility', S.lim ? 'visible' : 'none'); });
@@ -577,7 +685,7 @@ $('bt-png').addEventListener('click', () => {
   map.once('render', () => {
     const c = map.getCanvas(), out = document.createElement('canvas'); out.width = c.width; out.height = c.height;
     const ctx = out.getContext('2d'); ctx.drawImage(c, 0, 0);
-    if (S.janela >= 0) { const r = rendJ.domElement, b = r.getBoundingClientRect(), k = c.width / innerWidth; rendJ.render(cenaJ, camJ); ctx.fillStyle = 'rgba(12,22,20,.85)'; ctx.fillRect(b.left * k, b.top * k, b.width * k, b.height * k); ctx.drawImage(r, b.left * k, b.top * k, b.width * k, b.height * k); }
+    if (S.janela >= 0) { const r = rendJ.domElement, b = r.getBoundingClientRect(), k = c.width / innerWidth; renderJanela(); ctx.fillStyle = 'rgba(12,22,20,.85)'; ctx.fillRect(b.left * k, b.top * k, b.width * k, b.height * k); ctx.drawImage(r, b.left * k, b.top * k, b.width * k, b.height * k); }
     const a = document.createElement('a'); a.download = `ICEA_3D_${S.prod}_${S.cor}${S.janela >= 0 ? '_janela' + (S.janela + 1) : ''}.png`; a.href = out.toDataURL('image/png'); a.click();
   });
   map.triggerRepaint();
@@ -588,6 +696,84 @@ $('bt-tema').addEventListener('click', () => {
 });
 $('bt-painel').addEventListener('click', () => $('pnl-dir').classList.toggle('aberto'));
 try { const t = localStorage.getItem('icea3d-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+// ---------- modo apresentação (tour guiado) e gravação em vídeo ----------
+const voar = o => new Promise(r => { map.once('moveend', r); map.flyTo({ ...o, essential: true }); });
+const girar = (graus, ms) => new Promise(r => { map.once('moveend', r); map.easeTo({ bearing: map.getBearing() + graus, duration: ms, easing: t => t }); });
+function setProd(p) { S.prod = p; $('prod').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); tabelaCorredor(); atualizarGeral(); legenda(); }
+function camCorredor() { const b = [[M.left, M.top - M.H * M.px], [M.left + M.W * M.px, M.top]]; return map.cameraForBounds(b, { padding: { top: 170, bottom: 60, left: 60, right: 60 } }); }
+const N3 = v => fmt(v, 3), NUM = D.numeros || {};
+function setOpacidade(v) { S.op = v; $('op').value = v; $('op-v').textContent = Math.round(v * 100) + '%'; matG.opacity = v; escGeral.visible = v > 0; map.triggerRepaint(); }
+function setGrande(v) { S.grande = v; $('inset').classList.toggle('grande', v); $('ins-grande').classList.toggle('on', v); setTimeout(tamanhoInset, 0); }
+const PASSOS = [
+  { tit: 'Corredor Ecológico da Bacia do Rio São Lourenço', txt: 'Mato Grosso, Brasil: um corredor entre o planalto do Cerrado e a planície do Pantanal.',
+    acao: async () => { fecharJanela(); setProd('lang'); setOpacidade(0.9); setGrande(false); map.jumpTo({ center: centro, zoom: 1.4, pitch: 0, bearing: 0 }); await voar({ center: centro, zoom: 4.3, pitch: 25, bearing: 0, duration: 5500 }); }, ms: 2200 },
+  { tit: 'O corredor sobre o relevo real', txt: 'Imagem de satélite sobre o modelo de elevação (SRTM), com o céu e o sombreamento do terreno. Por cima, a estrutura do dossel em blocos de cerca de 270 m.',
+    acao: async () => { await voar({ ...camCorredor(), pitch: 62, bearing: -25, duration: 6500 }); }, ms: 1500 },
+  { tit: 'ICEA pelo LANG (ETH 2020, 10 m)', txt: `ICEA = fc × min(hd / ${M.h_ref} m, 1): de 0 (sem dossel arbóreo) a 1 (dossel fechado e alto). ICEA médio do corredor pelo LANG: ${N3(NUM.icea_medio?.lang)}.`,
+    acao: async () => { setProd('lang'); await girar(35, 7000); }, ms: 300 },
+  { tit: 'ICEA pelo GEDI / Potapov (2019, 30 m)', txt: `O mesmo índice com outro mapa de altura: o ICEA médio do corredor cai para ${N3(NUM.icea_medio?.gedi)}.`,
+    acao: async () => { setProd('gedi'); await girar(35, 7000); }, ms: 300 },
+  { tit: 'ICEA pelo META (Meta/WRI, 1 m)', txt: `Pelo META, o ICEA médio é ${N3(NUM.icea_medio?.meta)}. A escolha do produto muda o retrato do dossel do corredor.`,
+    acao: async () => { setProd('meta'); await girar(35, 7000); }, ms: 300 },
+  { tit: 'Onde os produtos mais divergem', txt: 'Janela de cerca de 3,5 km em 30 m: LANG, GEDI e META lado a lado, em nuvem de pontos sintética (fc, hd e topo de cada célula), com Eye-Dome Lighting.',
+    acao: async () => { setProd('lang'); setOpacidade(0.35); setGrande(true); S.comparar = true; $('ins-comparar').classList.add('on'); S.edl = true; $('ins-edl').classList.add('on'); ctlJ.autoRotate = true; await abrirJanela(2); }, ms: 9000 },
+  { tit: 'O lidar GEDI como referência', txt: `Colunas = pegadas GEDI (RH98). RMSE do ICEA contra o lidar: LANG ${N3(NUM.rmse_icea?.lang)}, GEDI ${N3(NUM.rmse_icea?.gedi)}, META ${N3(NUM.rmse_icea?.meta)}.`,
+    acao: async () => { setGrande(false); const jd = D.janelas[2]; await voar({ center: lonlat(jd.c0 + jd.n / 2, jd.r0 + jd.n / 2), zoom: 12.6, pitch: 66, bearing: map.getBearing() + 40, duration: 6000 }); }, ms: 3000 },
+  { tit: 'Concordância com o lidar', txt: `CCC de Lin do ICEA: LANG ${N3(NUM.ccc_icea?.lang)}, GEDI ${N3(NUM.ccc_icea?.gedi)}, META ${N3(NUM.ccc_icea?.meta)}. Explore à vontade: clique nas janelas, troque produto, cor e relevo.`,
+    acao: async () => { ctlJ.autoRotate = false; fecharJanela(); setOpacidade(0.9); setGrande(false); S.comparar = false; $('ins-comparar').classList.remove('on'); await voar({ ...camCorredor(), pitch: 55, bearing: -12, duration: 5500 }); }, ms: 3500 },
+];
+const TOUR = { ativo: false, i: 0, pausado: false, token: 0 };
+function mostrarPasso() {
+  const p = PASSOS[TOUR.i]; $('tour-tit').textContent = p.tit; $('tour-txt').textContent = p.txt;
+  $('tour-pos').innerHTML = PASSOS.map((_, k) => `<i class="${k === TOUR.i ? 'on' : ''}"></i>`).join('');
+}
+async function rodarPasso(i) {
+  const tk = ++TOUR.token; TOUR.i = clamp(i, 0, PASSOS.length - 1); mostrarPasso();
+  await PASSOS[TOUR.i].acao(); if (tk !== TOUR.token) return;
+  await new Promise(r => setTimeout(r, PASSOS[TOUR.i].ms));
+  while (TOUR.pausado && tk === TOUR.token) await new Promise(r => setTimeout(r, 200));
+  if (tk !== TOUR.token || !TOUR.ativo) return;
+  if (TOUR.i < PASSOS.length - 1) rodarPasso(TOUR.i + 1); else if (GRAV.rec) pararGravacao();
+}
+function entrarTour(i = 0) { TOUR.ativo = true; TOUR.pausado = false; $('tour-pausa').textContent = '❚❚'; document.body.classList.add('tour'); rodarPasso(i); }
+function sairTour() { TOUR.ativo = false; TOUR.token++; document.body.classList.remove('tour'); ctlJ.autoRotate = girando; if (GRAV.rec) pararGravacao(); }
+$('bt-tour').addEventListener('click', () => entrarTour(0));
+$('tour-sair').addEventListener('click', sairTour);
+$('tour-prox').addEventListener('click', () => rodarPasso(TOUR.i + 1));
+$('tour-ant').addEventListener('click', () => rodarPasso(TOUR.i - 1));
+$('tour-pausa').addEventListener('click', () => { TOUR.pausado = !TOUR.pausado; $('tour-pausa').textContent = TOUR.pausado ? '▶︎ Continuar' : '❚❚'; });
+addEventListener('keydown', e => { if (!TOUR.ativo) return; if (e.key === 'Escape') sairTour(); if (e.key === 'ArrowRight') rodarPasso(TOUR.i + 1); if (e.key === 'ArrowLeft') rodarPasso(TOUR.i - 1); });
+// gravação: compõe mapa + janela 3D + legenda num canvas e grava com MediaRecorder (.webm)
+const GRAV = { rec: null, cv: null, ctx: null, partes: [] };
+function iniciarGravacao() {
+  const c = map.getCanvas(); GRAV.cv = document.createElement('canvas'); GRAV.cv.width = c.width; GRAV.cv.height = c.height; GRAV.ctx = GRAV.cv.getContext('2d');
+  const tipo = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!tipo) { alert('Este navegador não grava vídeo de canvas (MediaRecorder). Use Chrome, Edge ou Firefox.'); return; }
+  GRAV.partes = []; GRAV.rec = new MediaRecorder(GRAV.cv.captureStream(30), { mimeType: tipo, videoBitsPerSecond: 14e6 });
+  GRAV.rec.ondataavailable = e => { if (e.data.size) GRAV.partes.push(e.data); };
+  GRAV.rec.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(GRAV.partes, { type: 'video/webm' })); a.download = ARQ_VIDEO; a.click(); GRAV.rec = null; };
+  GRAV.rec.start(500); $('tour-rec').classList.add('on'); $('tour-rec').textContent = '■ Parar e salvar';
+}
+function pararGravacao() { if (GRAV.rec && GRAV.rec.state !== 'inactive') GRAV.rec.stop(); $('tour-rec').classList.remove('on'); $('tour-rec').textContent = '● Gravar vídeo'; }
+$('tour-rec').addEventListener('click', () => { if (GRAV.rec) { pararGravacao(); return; } iniciarGravacao(); if (GRAV.rec) rodarPasso(0); });
+function quebrar(ctx, txt, larg) { const ps = txt.split(' '), l = []; let a = ''; for (const p of ps) { const t = a ? a + ' ' + p : p; if (ctx.measureText(t).width > larg && a) { l.push(a); a = p; } else a = t; } if (a) l.push(a); return l; }
+function quadroGravacao() {
+  if (!GRAV.rec) return;
+  const c = map.getCanvas(), g = GRAV.ctx, k = c.width / c.clientWidth, W = GRAV.cv.width; g.drawImage(c, 0, 0);
+  if (S.janela >= 0) { const r = rendJ.domElement.getBoundingClientRect(); g.fillStyle = 'rgba(12,22,20,.82)'; g.fillRect(r.left * k, r.top * k, r.width * k, r.height * k); g.drawImage(rendJ.domElement, r.left * k, r.top * k, r.width * k, r.height * k); }
+  if (TOUR.ativo) {
+    const p = PASSOS[TOUR.i], bw = Math.min(760 * k, W - 32 * k), x = (W - bw) / 2, y = 16 * k;
+    g.font = `400 ${14 * k}px Manrope, sans-serif`; const ls = quebrar(g, p.txt, bw - 36 * k), bh = (54 + ls.length * 20) * k;
+    g.fillStyle = 'rgba(12,22,20,.8)'; g.beginPath(); g.roundRect(x, y, bw, bh, 16 * k); g.fill();
+    g.fillStyle = '#f4dc9c'; g.font = `800 ${20 * k}px "Bricolage Grotesque", sans-serif`; g.fillText(p.tit, x + 18 * k, y + 32 * k);
+    g.fillStyle = '#e8efe9'; g.font = `400 ${14 * k}px Manrope, sans-serif`; ls.forEach((t, i) => g.fillText(t, x + 18 * k, y + (56 + i * 20) * k));
+  }
+  g.font = `600 ${10 * k}px Manrope, sans-serif`; g.fillStyle = 'rgba(255,255,255,.8)'; g.textAlign = 'right';
+  g.fillText(CREDITO_VIDEO, W - 10 * k, GRAV.cv.height - 10 * k); g.textAlign = 'left';
+}
+const ARQ_VIDEO = 'ICEA_BHSL_apresentacao.webm';
+const CREDITO_VIDEO = 'Imagens © Esri, Maxar, Earthstar Geographics · Relevo: AWS Terrain Tiles (SRTM)';
 
 // ---------- início ----------
 async function iniciar() {
@@ -601,17 +787,22 @@ async function iniciar() {
   iniciarGeral(); tabelaCorredor(); legenda();
   await estiloPronto;
   camadasMapa(); atualizarGeral();
+  $('tt').value = S.T; $('tt-v').textContent = '×' + S.T;
+  try { map.setSky({ 'sky-color': '#0d2a45', 'horizon-color': '#9ec3d6', 'fog-color': '#c8d6dc', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85,
+    'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 7, 1, 11, 0.2] }); } catch (e) { console.warn('céu indisponível', e); }
+  carregarDEM().then(e => { elevG = e; aplicarTerreno(); }).catch(err => { console.warn('DEM indisponível; terreno desligado', err); S.terreno = false; $('tg-terreno').checked = false; $('tg-terreno').disabled = true; aplicarTerreno(); });
   $('carregando').classList.add('fim');
   setTimeout(() => { if (S.janela < 0) irCorredor(); }, 600);
 }
 const vtmp = new THREE.Vector3();
 function animar(t) {
   requestAnimationFrame(animar);
+  quadroGravacao();
   if (girando && !map.isMoving() && S.janela < 0) map.setBearing(map.getBearing() + 0.08);
   if (S.janela >= 0) {
     ctlJ.update();
     if (sujoJ && t - tPickJ > 70) { tPickJ = t; sujoJ = false; pickJanela(); }
-    rendJ.render(cenaJ, camJ);
+    renderJanela();
     const w = insCena.clientWidth, h = insCena.clientHeight;
     for (const r of rotJ) { vtmp.copy(r.v).project(camJ); r.el.style.transform = `translate(${(vtmp.x * .5 + .5) * w}px,${(-vtmp.y * .5 + .5) * h}px) translate(-50%,-120%)`; }
   }
