@@ -204,7 +204,7 @@ body.tour #pnl-esq,body.tour #pnl-dir,body.tour #legenda{display:none}
     <p><b>Janela 3D</b> (canto inferior direito): nuvem de pontos <b>sintética</b>. Cada célula de 30 m recebe copas em número proporcional a fc, com altura entre hd e o topo; as posições são sorteadas com semente fixa. Não é lidar: mostra a estrutura que cada produto atribui ao dossel.</p>
     <p><b>Pegadas GEDI:</b> lidar real (raio 12,5 m), cor pelo ICEA de referência <code>cover_z1 × min(RH98 / H<sub>REF</sub>, 1)</code>. Na janela 3D, viram colunas com a altura RH98.</p>
     <p><b>Terreno:</b> modelo digital de elevação (SRTM e outras fontes, AWS Terrain Tiles) com sombreamento e céu atmosférico; o relevo do dossel fica por cima do terreno. <b>EDL</b> (Eye-Dome Lighting) é o sombreamento por profundidade usado em visualizadores lidar como o Potree: realça a forma das copas na nuvem de pontos.</p>
-    <p><b>Modo apresentação:</b> tour guiado com voos de câmera e legendas; "Gravar vídeo" salva o tour inteiro em .webm para slides.</p>
+    <p><b>Modo apresentação:</b> tour guiado com voos de câmera e legendas; "Gravar vídeo" salva o tour inteiro em MP4 (H.264) no Chrome e no Edge, ou em WebM nos outros navegadores.</p>
     <p>Imagem de satélite: Esri World Imagery. Visual inspirado em <i>lidar-mangrove-canopy</i> (linaq11).</p>
   </details>
 </section>
@@ -244,7 +244,7 @@ body.tour #pnl-esq,body.tour #pnl-dir,body.tour #legenda{display:none}
     <button id="tour-pausa" title="Pausar">❚❚</button>
     <button id="tour-prox" title="Próximo">▶</button>
     <span id="tour-pos"></span>
-    <button id="tour-rec" title="Grava o tour inteiro em vídeo .webm (mapa, janela 3D e legendas)">● Gravar vídeo</button>
+    <button id="tour-rec" title="Grava o tour inteiro em vídeo MP4 (ou WebM): mapa, janela 3D e legendas">● Gravar vídeo</button>
     <button id="tour-sair" title="Sair do modo apresentação">✕</button>
   </div>
 </section>
@@ -343,7 +343,7 @@ const camadaCorredor = {
   },
 };
 // relevo: altura do terreno (DEM Terrarium, z 10) em cada vértice, somada ao dossel exagerado
-let elevG = null, hG = null, fZ = 1, zSujo = true, normaisSujas = true;
+let elevG = null, hG = null, fZ = 1, zSujo = true, normaisSujas = true, demPronto = Promise.resolve();
 function aplicarZ(f) {
   if (!geoG || !hG) return;
   const pos = geoG.attributes.position.array, n = hG.length, usaT = S.terreno && elevG;
@@ -404,6 +404,8 @@ function atualizarGeral() {
   zSujo = true; map.triggerRepaint();
 }
 function aplicarTerreno() {
+  // ligar/desligar o terreno no meio de uma animação de câmera trava o MapLibre 4.7: espera a câmera parar
+  if (map.isMoving()) { map.once('moveend', aplicarTerreno); return; }
   try { map.setTerrain(S.terreno && elevG ? { source: 'dem', exaggeration: S.T } : null); } catch (e) { console.warn(e); }
   map.setLayoutProperty('relevo', 'visibility', S.terreno ? 'visible' : 'none');
   zSujo = true; map.triggerRepaint();
@@ -698,8 +700,9 @@ $('bt-painel').addEventListener('click', () => $('pnl-dir').classList.toggle('ab
 try { const t = localStorage.getItem('icea3d-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 
 // ---------- modo apresentação (tour guiado) e gravação em vídeo ----------
-const voar = o => new Promise(r => { map.once('moveend', r); map.flyTo({ ...o, essential: true }); });
-const girar = (graus, ms) => new Promise(r => { map.once('moveend', r); map.easeTo({ bearing: map.getBearing() + graus, duration: ms, easing: t => t }); });
+// cada movimento para o anterior ANTES de escutar o moveend (senão o fim do voo interrompido resolve a etapa na hora)
+const voar = o => new Promise(r => { map.stop(); map.once('moveend', r); map.flyTo({ ...o, essential: true }); });
+const girar = (graus, ms) => new Promise(r => { map.stop(); map.once('moveend', r); map.easeTo({ bearing: map.getBearing() + graus, duration: ms, easing: t => t }); });
 function setProd(p) { S.prod = p; $('prod').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); tabelaCorredor(); atualizarGeral(); legenda(); }
 function camCorredor() { const b = [[M.left, M.top - M.H * M.px], [M.left + M.W * M.px, M.top]]; return map.cameraForBounds(b, { padding: { top: 170, bottom: 60, left: 60, right: 60 } }); }
 const N3 = v => fmt(v, 3), NUM = D.numeros || {};
@@ -717,11 +720,11 @@ const PASSOS = [
   { tit: 'ICEA pelo META (Meta/WRI, 1 m)', txt: `Pelo META, o ICEA médio é ${N3(NUM.icea_medio?.meta)}. A escolha do produto muda o retrato do dossel do corredor.`,
     acao: async () => { setProd('meta'); await girar(35, 7000); }, ms: 300 },
   { tit: 'Onde os produtos mais divergem', txt: 'Janela de cerca de 3,5 km em 30 m: LANG, GEDI e META lado a lado, em nuvem de pontos sintética (fc, hd e topo de cada célula), com Eye-Dome Lighting.',
-    acao: async () => { setProd('lang'); setOpacidade(0.35); setGrande(true); S.comparar = true; $('ins-comparar').classList.add('on'); S.edl = true; $('ins-edl').classList.add('on'); ctlJ.autoRotate = true; await abrirJanela(2); }, ms: 9000 },
+    acao: async () => { setProd('lang'); setOpacidade(0.35); setGrande(true); S.dens = 0.5; $('ins-dens').textContent = 'Densidade ×0,5'; S.comparar = true; $('ins-comparar').classList.add('on'); S.edl = true; $('ins-edl').classList.add('on'); ctlJ.autoRotate = true; await abrirJanela(2); }, ms: 9000 },
   { tit: 'O lidar GEDI como referência', txt: `Colunas = pegadas GEDI (RH98). RMSE do ICEA contra o lidar: LANG ${N3(NUM.rmse_icea?.lang)}, GEDI ${N3(NUM.rmse_icea?.gedi)}, META ${N3(NUM.rmse_icea?.meta)}.`,
     acao: async () => { setGrande(false); const jd = D.janelas[2]; await voar({ center: lonlat(jd.c0 + jd.n / 2, jd.r0 + jd.n / 2), zoom: 12.6, pitch: 66, bearing: map.getBearing() + 40, duration: 6000 }); }, ms: 3000 },
   { tit: 'Concordância com o lidar', txt: `CCC de Lin do ICEA: LANG ${N3(NUM.ccc_icea?.lang)}, GEDI ${N3(NUM.ccc_icea?.gedi)}, META ${N3(NUM.ccc_icea?.meta)}. Explore à vontade: clique nas janelas, troque produto, cor e relevo.`,
-    acao: async () => { ctlJ.autoRotate = false; fecharJanela(); setOpacidade(0.9); setGrande(false); S.comparar = false; $('ins-comparar').classList.remove('on'); await voar({ ...camCorredor(), pitch: 55, bearing: -12, duration: 5500 }); }, ms: 3500 },
+    acao: async () => { ctlJ.autoRotate = false; fecharJanela(); setOpacidade(0.9); setGrande(false); S.dens = 1; $('ins-dens').textContent = 'Densidade ×1'; S.comparar = false; $('ins-comparar').classList.remove('on'); await voar({ ...camCorredor(), pitch: 55, bearing: -12, duration: 5500 }); }, ms: 3500 },
 ];
 const TOUR = { ativo: false, i: 0, pausado: false, token: 0 };
 function mostrarPasso() {
@@ -736,7 +739,11 @@ async function rodarPasso(i) {
   if (tk !== TOUR.token || !TOUR.ativo) return;
   if (TOUR.i < PASSOS.length - 1) rodarPasso(TOUR.i + 1); else if (GRAV.rec) pararGravacao();
 }
-function entrarTour(i = 0) { TOUR.ativo = true; TOUR.pausado = false; $('tour-pausa').textContent = '❚❚'; document.body.classList.add('tour'); rodarPasso(i); }
+async function entrarTour(i = 0) {
+  TOUR.ativo = true; TOUR.pausado = false; $('tour-pausa').textContent = '❚❚'; document.body.classList.add('tour');
+  $('tour-tit').textContent = 'Preparando o terreno…'; $('tour-txt').textContent = ''; await demPronto; map.stop();
+  await new Promise(r => setTimeout(r, 400)); if (TOUR.ativo) rodarPasso(i);
+}
 function sairTour() { TOUR.ativo = false; TOUR.token++; document.body.classList.remove('tour'); ctlJ.autoRotate = girando; if (GRAV.rec) pararGravacao(); }
 $('bt-tour').addEventListener('click', () => entrarTour(0));
 $('tour-sair').addEventListener('click', sairTour);
@@ -744,23 +751,40 @@ $('tour-prox').addEventListener('click', () => rodarPasso(TOUR.i + 1));
 $('tour-ant').addEventListener('click', () => rodarPasso(TOUR.i - 1));
 $('tour-pausa').addEventListener('click', () => { TOUR.pausado = !TOUR.pausado; $('tour-pausa').textContent = TOUR.pausado ? '▶︎ Continuar' : '❚❚'; });
 addEventListener('keydown', e => { if (!TOUR.ativo) return; if (e.key === 'Escape') sairTour(); if (e.key === 'ArrowRight') rodarPasso(TOUR.i + 1); if (e.key === 'ArrowLeft') rodarPasso(TOUR.i - 1); });
-// gravação: compõe mapa + janela 3D + legenda num canvas e grava com MediaRecorder (.webm)
-const GRAV = { rec: null, cv: null, ctx: null, partes: [] };
+// gravação: compõe mapa + janela 3D + legenda num canvas e grava com MediaRecorder.
+// MP4 (H.264) quando o navegador suporta (Chrome/Edge): arquivo com duração, abre em qualquer player e no PowerPoint;
+// senão WebM. Um quadro é enviado ao gravador a cada desenho (captureStream(0) + requestFrame), em até 1920 px de largura.
+const GRAV = { rec: null, cv: null, ctx: null, partes: [], faixa: null, tipo: '', ext: 'webm', escala: 1, pr: null };
 function iniciarGravacao() {
-  const c = map.getCanvas(); GRAV.cv = document.createElement('canvas'); GRAV.cv.width = c.width; GRAV.cv.height = c.height; GRAV.ctx = GRAV.cv.getContext('2d');
-  const tipo = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
-  if (!tipo) { alert('Este navegador não grava vídeo de canvas (MediaRecorder). Use Chrome, Edge ou Firefox.'); return; }
-  GRAV.partes = []; GRAV.rec = new MediaRecorder(GRAV.cv.captureStream(30), { mimeType: tipo, videoBitsPerSecond: 14e6 });
+  if (!window.MediaRecorder) { alert('Este navegador não grava vídeo (MediaRecorder). Use Chrome, Edge ou Firefox.'); return; }
+  const opcoes = [['video/mp4;codecs=avc1.640028', 'mp4'], ['video/mp4;codecs=avc1.4d0028', 'mp4'], ['video/mp4', 'mp4'],
+                  ['video/webm;codecs=vp8', 'webm'], ['video/webm;codecs=vp9', 'webm'], ['video/webm', 'webm']];
+  const ok = opcoes.find(([t]) => MediaRecorder.isTypeSupported(t));
+  if (!ok) { alert('Nenhum formato de vídeo disponível neste navegador.'); return; }
+  [GRAV.tipo, GRAV.ext] = ok;
+  // cena mais leve durante a gravação: o mapa desenha em densidade 1
+  GRAV.pr = map.getPixelRatio(); if (GRAV.pr > 1) map.setPixelRatio(1);
+  const c = map.getCanvas(); GRAV.escala = Math.min(1, 1920 / c.width);
+  GRAV.cv = document.createElement('canvas');
+  GRAV.cv.width = Math.round(c.width * GRAV.escala / 2) * 2; GRAV.cv.height = Math.round(c.height * GRAV.escala / 2) * 2;   // H.264 pede dimensões pares
+  GRAV.ctx = GRAV.cv.getContext('2d');
+  const stream = GRAV.cv.captureStream(0); GRAV.faixa = stream.getVideoTracks()[0];
+  GRAV.partes = []; GRAV.rec = new MediaRecorder(stream, { mimeType: GRAV.tipo, videoBitsPerSecond: 5e6 });
   GRAV.rec.ondataavailable = e => { if (e.data.size) GRAV.partes.push(e.data); };
-  GRAV.rec.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(GRAV.partes, { type: 'video/webm' })); a.download = ARQ_VIDEO; a.click(); GRAV.rec = null; };
-  GRAV.rec.start(500); $('tour-rec').classList.add('on'); $('tour-rec').textContent = '■ Parar e salvar';
+  GRAV.rec.onstop = () => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(GRAV.partes, { type: GRAV.tipo.split(';')[0] }));
+    a.download = ARQ_VIDEO + '.' + GRAV.ext; a.click(); GRAV.rec = null; GRAV.faixa = null;
+    if (GRAV.pr && GRAV.pr !== map.getPixelRatio()) map.setPixelRatio(GRAV.pr);
+  };
+  GRAV.rec.start(1000); $('tour-rec').classList.add('on'); $('tour-rec').textContent = '■ Parar e salvar (' + GRAV.ext.toUpperCase() + ')';
 }
-function pararGravacao() { if (GRAV.rec && GRAV.rec.state !== 'inactive') GRAV.rec.stop(); $('tour-rec').classList.remove('on'); $('tour-rec').textContent = '● Gravar vídeo'; }
-$('tour-rec').addEventListener('click', () => { if (GRAV.rec) { pararGravacao(); return; } iniciarGravacao(); if (GRAV.rec) rodarPasso(0); });
+function pararGravacao() { if (GRAV.rec && GRAV.rec.state !== 'inactive') { GRAV.faixa?.requestFrame?.(); GRAV.rec.stop(); } $('tour-rec').classList.remove('on'); $('tour-rec').textContent = '● Gravar vídeo'; }
+$('tour-rec').addEventListener('click', async () => { if (GRAV.rec) { pararGravacao(); return; } await demPronto; iniciarGravacao(); if (GRAV.rec) rodarPasso(0); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && GRAV.rec) console.warn('A aba saiu de foco: o navegador pausa a animação e o vídeo fica parado nesse trecho.'); });
 function quebrar(ctx, txt, larg) { const ps = txt.split(' '), l = []; let a = ''; for (const p of ps) { const t = a ? a + ' ' + p : p; if (ctx.measureText(t).width > larg && a) { l.push(a); a = p; } else a = t; } if (a) l.push(a); return l; }
 function quadroGravacao() {
   if (!GRAV.rec) return;
-  const c = map.getCanvas(), g = GRAV.ctx, k = c.width / c.clientWidth, W = GRAV.cv.width; g.drawImage(c, 0, 0);
+  const c = map.getCanvas(), g = GRAV.ctx, k = GRAV.cv.width / c.clientWidth, W = GRAV.cv.width; g.drawImage(c, 0, 0, GRAV.cv.width, GRAV.cv.height);
   if (S.janela >= 0) { const r = rendJ.domElement.getBoundingClientRect(); g.fillStyle = 'rgba(12,22,20,.82)'; g.fillRect(r.left * k, r.top * k, r.width * k, r.height * k); g.drawImage(rendJ.domElement, r.left * k, r.top * k, r.width * k, r.height * k); }
   if (TOUR.ativo) {
     const p = PASSOS[TOUR.i], bw = Math.min(760 * k, W - 32 * k), x = (W - bw) / 2, y = 16 * k;
@@ -771,8 +795,9 @@ function quadroGravacao() {
   }
   g.font = `600 ${10 * k}px Manrope, sans-serif`; g.fillStyle = 'rgba(255,255,255,.8)'; g.textAlign = 'right';
   g.fillText(CREDITO_VIDEO, W - 10 * k, GRAV.cv.height - 10 * k); g.textAlign = 'left';
+  GRAV.faixa?.requestFrame?.();
 }
-const ARQ_VIDEO = 'ICEA_BHSL_apresentacao.webm';
+const ARQ_VIDEO = 'ICEA_BHSL_apresentacao';
 const CREDITO_VIDEO = 'Imagens © Esri, Maxar, Earthstar Geographics · Relevo: AWS Terrain Tiles (SRTM)';
 
 // ---------- início ----------
@@ -790,7 +815,7 @@ async function iniciar() {
   $('tt').value = S.T; $('tt-v').textContent = '×' + S.T;
   try { map.setSky({ 'sky-color': '#0d2a45', 'horizon-color': '#9ec3d6', 'fog-color': '#c8d6dc', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85,
     'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 7, 1, 11, 0.2] }); } catch (e) { console.warn('céu indisponível', e); }
-  carregarDEM().then(e => { elevG = e; aplicarTerreno(); }).catch(err => { console.warn('DEM indisponível; terreno desligado', err); S.terreno = false; $('tg-terreno').checked = false; $('tg-terreno').disabled = true; aplicarTerreno(); });
+  demPronto = carregarDEM().then(e => { elevG = e; aplicarTerreno(); }).catch(err => { console.warn('DEM indisponível; terreno desligado', err); S.terreno = false; $('tg-terreno').checked = false; $('tg-terreno').disabled = true; aplicarTerreno(); });
   $('carregando').classList.add('fim');
   setTimeout(() => { if (S.janela < 0) irCorredor(); }, 600);
 }
